@@ -14,14 +14,23 @@ from metrics import MINDLoss
 
 
 class TPFM(nn.Module):
-    """
-    Implementation of time-dependent flow map based on two parameter cocycle property
+    """Implementation of TPFM-DIR for 3D images
     """
     def __init__(
         self,
         backbone: nn.Module,
         loss_type: str='ncc'
     ) -> None:
+        """
+        Args:
+            backbone (nn.Module): An arbitrary time-dependent architecture which receives
+                                  an input tensor x (concatenation of fixed and moving images),
+                                  an intial time step s, and an end time step t, and returns
+                                  a displacement field with shape [B, 3, D, H, W].
+            
+            loss_type (str): The name of the loss function that should be used for training
+                             the model; Supported: ncc, mse, l1, ngf, mind
+        """
         super().__init__()
 
         self.loss_type = loss_type
@@ -38,7 +47,6 @@ class TPFM(nn.Module):
         else:
             raise Exception('Invalid loss function')
 
-        self.flow_based = True
         self.net = backbone
 
     def forward(
@@ -51,12 +59,14 @@ class TPFM(nn.Module):
     ) -> torch.Tensor:
         """
         Args:
-            I (torch.Tensor): fixed image with size [B, 1, D, H, W]
-            J (torch.Tensor): moving image with size [B, 1, D, H, W]
-            xyz (torch.Tensor): identity grid with size [B, D, H, W, 3]
-            t (torch.Tensor): sampled time with size [B]
+            fixed (torch.Tensor): Fixed image with size [B, 1, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, D, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, D, H, W, 3]
+            s (torch.Tensor): Sampled initial time with size [B]
+            t (torch.Tensor): Sampled end time with size [B]
+
         Returns:
-            torch.Tensor: the deformation grid at time t with size [B, D, H, W, 3]
+            torch.Tensor: The deformation grid at time t with size [B, D, H, W, 3]
         """
         flow = (t - s) * self.flow_core(fixed, moving, s, t)
 
@@ -71,19 +81,23 @@ class TPFM(nn.Module):
         s: torch.Tensor,
         t: torch.Tensor
     ) -> torch.Tensor:
-        """
+        """Computes the main flow component of the TPFM-DIR
+        formulation
+
         Args:
-            I (torch.Tensor): fixed image with size [B, 1, D, H, W]
-            J (torch.Tensor): moving image with size [B, 1, D, H, W]
-            t (torch.Tensor): sampled time with size [1]
+            fixed (torch.Tensor): Fixed image with size [B, 1, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, D, H, W]
+            s (torch.Tensor): Sampled initial time with size [1]
+            t (torch.Tensor): Sampled end time with size [1]
+
         Returns:
-            torch.Tensor: the vector field at time t with size [B, 3, D, H, W]
+            torch.Tensor: The vector field at time t with size [B, 3, D, H, W]
         """
         u_in = torch.cat([fixed, moving], dim=1)
 
-        velocity = self.net(u_in, s, t)
+        disp = self.net(u_in, s, t)
 
-        return velocity
+        return disp
 
     def loss_flow(
         self,
@@ -92,14 +106,17 @@ class TPFM(nn.Module):
         id_grid: torch.Tensor,
         res: float
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
+        """Computes the time-dependent image similarity loss and
+        cocycle regularization
+
         Args:
-            I (torch.Tensor): fixed image with size [B, 1, D, H, W]
-            J (torch.Tensor): moving image with size [B, 1, D, H, W]
-            id_grid (torch.Tensor): identity grid with size [B, D, H, W, 3]
-            res (float): the resolution at which the ncc loss is computed
+            fixed (torch.Tensor): Fixed image with size [B, 1, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, D, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, D, H, W, 3]
+            res (float): The resolution at which the loss is computed
+
         Returns:
-            torch.Tensor, torch.Tensor: ncc loss, semigroup loss
+            torch.Tensor, torch.Tensor: Similarity loss, cocycle loss
         """
         mw, fw, flow_loss = self.cocycle_loss(fixed, moving, id_grid)
 
@@ -116,7 +133,21 @@ class TPFM(nn.Module):
         fixed: torch.Tensor,
         moving: torch.Tensor,
         id_grid: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Samples random time steps and computes:
+        1. The warped moving and fixed images at that particular time
+        2. The cocycle loss for the sampled time steps
+
+        Args:
+            fixed (torch.Tensor): Fixed image with size [B, 1, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, D, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, D, H, W, 3]
+
+        Returns:
+            torch.Tensor: Warped moving image with size [B, 1, D, H, W]
+            torch.Tensor: Warped fixed image with size [B, 1, D, H, W]
+            torch.Tensor: The cocycle loss
+        """
         t = torch.rand(1, device=fixed.device)
         s = torch.rand(1, device=fixed.device)
         t_0 = torch.zeros(1, device=fixed.device)
@@ -131,13 +162,7 @@ class TPFM(nn.Module):
 
             flow_s_t = (t - s) * checkpoint(self.flow_core, fixed, moving, s, t, use_reentrant=False)
 
-            if self.flow_based:
-                grid_0_s_t = id_grid + self.compose(flow_0_s, flow_s_t, id_grid).permute(0, 2, 3, 4, 1)
-            else:
-                warping_grid = grid_0_s + flow_s_t.permute(0, 2, 3, 4, 1)
-                grid_0_s_t = self.warp_with_grid(grid_0_s.permute(0, 4, 1, 2, 3),
-                                                 warping_grid,
-                                                 normalize=True).permute(0, 2, 3, 4, 1)
+            grid_0_s_t = id_grid + self.compose(flow_0_s, flow_s_t, id_grid).permute(0, 2, 3, 4, 1)
             
             flow_0_t = t * self.flow_core(fixed, moving, t_0, t)
             grid_0_t = id_grid + flow_0_t.permute(0, 2, 3, 4, 1)
@@ -155,13 +180,7 @@ class TPFM(nn.Module):
 
             flow_t_s = (s - t) * checkpoint(self.flow_core, fixed, moving, t, s, use_reentrant=False)
 
-            if self.flow_based:
-                grid_1_t_s = id_grid + self.compose(flow_1_t, flow_t_s, id_grid).permute(0, 2, 3, 4, 1)
-            else:
-                warping_grid = grid_1_t + flow_t_s.permute(0, 2, 3, 4, 1)
-                grid_1_t_s = self.warp_with_grid(grid_1_t.permute(0, 4, 1, 2, 3),
-                                                 warping_grid,
-                                                 normalize=True).permute(0, 2, 3, 4, 1)
+            grid_1_t_s = id_grid + self.compose(flow_1_t, flow_t_s, id_grid).permute(0, 2, 3, 4, 1)
             
             flow_1_s = (s - 1) * self.flow_core(fixed, moving, t_1, s)
             grid_1_s = id_grid + flow_1_s.permute(0, 2, 3, 4, 1)
@@ -181,6 +200,17 @@ class TPFM(nn.Module):
         flow: torch.Tensor,
         grid: torch.Tensor
     ) -> torch.Tensor:
+        """Recieves a flow/displacement field and converts it into a
+        deformation grid, ready to be used for warping an image.
+
+        Args:
+            flow (torch.Tensor): Flow/displacement field with size [B, 3, D, H, W]
+            grid (torch.Tensor): The grid on which the flow should act with size
+                                 [B, D, H, W, 3]
+
+        Returns:
+            torch.Tensor: The deformation grid with size [B, D, H, W, 3]
+        """
         phi = grid + flow.permute(0, 2, 3, 4, 1)
 
         phi = self.grid_normalizer(phi)
@@ -193,6 +223,18 @@ class TPFM(nn.Module):
         grid: torch.Tensor,
         normalize: bool=False
     ) -> torch.Tensor:
+        """Warps an input image with the given normalized/unnormalized grid.
+        If the grid is unnormalized the noromalize flag must be set True.
+
+        Args:
+            image (torch.Tensor): Input image with size [B, 1, D, H, W]
+            grid (torch.Tensor): Deformation with size [B, D, H, W, 3]
+            normalize (bool): If True, normalizes the grid into [-1, 1]
+                              befor applying the grid
+        
+        Returns:
+            torch.Tensor: The warped image with size [B, 1, D, H, W]
+        """
         if normalize:
             grid = self.grid_normalizer(grid.clone())
         
@@ -209,6 +251,16 @@ class TPFM(nn.Module):
         flow2: torch.Tensor,
         grid: torch.Tensor
     ):
+        """Computes the composition of two flows: flow1 o flow2.
+
+        Args:
+            flow1 (torch.Tensor): Flow with size [B, 3, D, H, W]
+            flow2 (torch.Tensor): Flow with size [B, 3, D, H, W]
+            grid (torch.Tensor): Initial grid flow2 acts on, with size [B, D, H, W, 3]
+        
+        Returns:
+            torch.Tensor: The composed flow with size [B, 3, D, H, W]
+        """
         grid = grid + flow2.permute(0, 2, 3, 4, 1)
 
         grid = self.grid_normalizer(grid)
@@ -224,6 +276,14 @@ class TPFM(nn.Module):
         self,
         grid: torch.Tensor
     ) -> torch.Tensor:
+        """Normalizes a deformation grid to [-1, 1]
+
+        Args:
+            grid (torch.Tensor): Unnormalized deformation with size [B, D, H, W, 3]
+        
+        Returns:
+            torch.Tensor: Normalized deformation with size [B, D, H, W, 3]
+        """
         _, d, h, w, _ = grid.size()
 
         grid[:, :, :, :, 0] = (grid[:, :, :, :, 0] - ((w - 1) / 2)) / (w - 1) * 2
@@ -232,7 +292,7 @@ class TPFM(nn.Module):
         
         return grid
 
-    def integrate(
+    def multistep_deform(
         self,
         fixed: torch.Tensor,
         moving: torch.Tensor,
@@ -240,6 +300,19 @@ class TPFM(nn.Module):
         num_steps: int=8,
         forward: bool=True
     ) -> torch.Tensor:
+        """Applies multistep composition of deformations used in the inference.
+
+        Args:
+            fixed (torch.Tensor): Fixed image with size [B, 1, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, D, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, D, H, W, 3]
+            num_steps (int): Number of compositions, defaults to 8.
+            forward (bool): If True, computes the moving-to-fixed deformation,
+                            and computes fixed-to-moving if False
+        
+        Returns:
+            torch.Tensor: The compositional deformation with size [B, D, H, W, 3]
+        """
         if forward:
             time_steps = torch.linspace(0, 1, num_steps + 1, device=grid.device)
         else:
@@ -264,14 +337,23 @@ class TPFM(nn.Module):
 
 
 class TPFM2D(nn.Module):
-    """
-    Implementation of both Time-Independet and Time-Dependent Phi network based on interpolative cmposition
+    """Implementation of TPFM-DIR for 2D images
     """
     def __init__(
         self, 
         backbone: nn.Module, 
         loss_type: str='ncc'
     ) -> None:
+        """
+        Args:
+            backbone (nn.Module): An arbitrary time-dependent architecture which receives
+                                  an input tensor x (concatenation of fixed and moving images),
+                                  an intial time step s, and an end time step t, and returns
+                                  a displacement field with shape [B, 2, H, W].
+            
+            loss_type (str): The name of the loss function that should be used for training
+                             the model; Supported: ncc, mse, l1, ngf, mind
+        """
         super().__init__()
 
         self.loss_type = loss_type
@@ -301,13 +383,14 @@ class TPFM2D(nn.Module):
     ) -> torch.Tensor:
         """
         Args:
-            I (torch.Tensor): fixed image with size [B, 1, H, W]
-            J (torch.Tensor): moving image with size [B, 1, H, W]
-            grid (torch.Tensor): identity grid with size [B, H, W, 2]
-            s (torch.Tensor): the initial sampled time with size [B]
-            t (torch.Tensor): the final sampled time with size [B]
+            fixed (torch.Tensor): Fixed image with size [B, 1, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, H, W, 2]
+            s (torch.Tensor): Sampled initial time with size [B]
+            t (torch.Tensor): Sampled end time with size [B]
+
         Returns:
-            torch.Tensor: the deformation grid at time t with size [B, H, W, 2]
+            torch.Tensor: The deformation grid at time t with size [B, H, W, 2]
         """
         flow = (t - s) * self.flow_core(fixed, moving, s, t)
 
@@ -322,21 +405,23 @@ class TPFM2D(nn.Module):
         s: torch.Tensor,
         t: torch.Tensor
     ) -> torch.Tensor:
-        """
+        """Computes the main flow component of the TPFM-DIR
+        formulation
+
         Args:
-            fixed (torch.Tensor): fixed image with size [B, 1, H, W]
-            moving (torch.Tensor): moving image with size [B, 1, H, W]
-            grid (torch.Tensor): the sampling grid with size [B, H, W, 2]
-            s (torch.Tensor): the initial sampled time with size [B]
-            t (torch.Tensor): the final sampled time with size [B]
+            fixed (torch.Tensor): Fixed image with size [B, 1, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, H, W]
+            s (torch.Tensor): Sampled initial time with size [1]
+            t (torch.Tensor): Sampled end time with size [1]
+
         Returns:
-            torch.Tensor: the vector field at time t with size [B, 2, H, W]
+            torch.Tensor: The vector field at time t with size [B, 2, H, W]
         """
         u_in = torch.cat([fixed, moving], dim=1)
 
-        velocity = self.net(u_in, s, t)
+        disp = self.net(u_in, s, t)
 
-        return velocity
+        return disp
 
     def loss_flow(
         self, 
@@ -345,14 +430,17 @@ class TPFM2D(nn.Module):
         id_grid: torch.Tensor,
         res: float
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
+        """Computes the time-dependent image similarity loss and
+        cocycle regularization
+
         Args:
-            I (torch.Tensor): fixed image with size [B, 1, H, W]
-            J (torch.Tensor): moving image with size [B, 1, H, W]
-            id_grid (torch.Tensor): identity grid with size [B, H, W, 2]
-            res (float): the resolution at which the ncc loss is computed
+            fixed (torch.Tensor): Fixed image with size [B, 1, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, H, W, 2]
+            res (float): The resolution at which the loss is computed
+
         Returns:
-            torch.Tensor, torch.Tensor: ncc loss, semigroup loss
+            torch.Tensor, torch.Tensor: Similarity loss, cocycle loss
         """
         mw, fw, flow_loss = self.cocycle_loss(fixed, moving, id_grid)
 
@@ -370,6 +458,20 @@ class TPFM2D(nn.Module):
         moving: torch.Tensor,
         id_grid: torch.Tensor
     ) -> torch.Tensor:
+        """Samples random time steps and computes:
+        1. The warped moving and fixed images at that particular time
+        2. The cocycle loss for the sampled time steps
+
+        Args:
+            fixed (torch.Tensor): Fixed image with size [B, 1, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, H, W, 2]
+
+        Returns:
+            torch.Tensor: Warped moving image with size [B, 1, H, W]
+            torch.Tensor: Warped fixed image with size [B, 1, H, W]
+            torch.Tensor: The cocycle loss
+        """
         t = torch.rand(1, device=fixed.device)
         s = torch.rand(1, device=fixed.device)
         t_0 = torch.zeros(1, device=fixed.device)
@@ -434,6 +536,17 @@ class TPFM2D(nn.Module):
         flow: torch.Tensor,
         grid: torch.Tensor
     ) -> torch.Tensor:
+        """Recieves a flow/displacement field and converts it into a
+        deformation grid, ready to be used for warping an image.
+
+        Args:
+            flow (torch.Tensor): Flow/displacement field with size [B, 2, H, W]
+            grid (torch.Tensor): The grid on which the flow should act with size
+                                 [B, H, W, 2]
+
+        Returns:
+            torch.Tensor: The deformation grid with size [B, H, W, 2]
+        """
         phi = grid + flow.permute(0, 2, 3, 1)
 
         phi = self.grid_normalizer(phi)
@@ -446,6 +559,18 @@ class TPFM2D(nn.Module):
         grid: torch.Tensor,
         normalize: bool=False
     ) -> torch.Tensor:
+        """Warps an input image with the given normalized/unnormalized grid.
+        If the grid is unnormalized the noromalize flag must be set True.
+
+        Args:
+            image (torch.Tensor): Input image with size [B, 1, H, W]
+            grid (torch.Tensor): Deformation with size [B, H, W, 2]
+            normalize (bool): If True, normalizes the grid into [-1, 1]
+                              befor applying the grid
+        
+        Returns:
+            torch.Tensor: The warped image with size [B, 1, H, W]
+        """
         if normalize:
             grid = self.grid_normalizer(grid.clone())
         
@@ -462,6 +587,16 @@ class TPFM2D(nn.Module):
         flow2: torch.Tensor,
         grid: torch.Tensor
     ) -> torch.Tensor:
+        """Computes the composition of two flows: flow1 o flow2.
+
+        Args:
+            flow1 (torch.Tensor): Flow with size [B, 2, H, W]
+            flow2 (torch.Tensor): Flow with size [B, 2, H, W]
+            grid (torch.Tensor): Initial grid flow2 acts on, with size [B, H, W, 2]
+        
+        Returns:
+            torch.Tensor: The composed flow with size [B, 2, H, W]
+        """
         grid = grid + flow2.permute(0, 2, 3, 1)
 
         grid = self.grid_normalizer(grid)
@@ -477,6 +612,14 @@ class TPFM2D(nn.Module):
         self,
         grid: torch.Tensor
     ) -> torch.Tensor:
+        """Normalizes a deformation grid to [-1, 1]
+
+        Args:
+            grid (torch.Tensor): Unnormalized deformation with size [B, H, W, 2]
+        
+        Returns:
+            torch.Tensor: Normalized deformation with size [B, H, W, 2]
+        """
         _, h, w, _ = grid.size()
 
         grid[:, :, :, 0] = (grid[:, :, :, 0] - ((w - 1) / 2)) / (w - 1) * 2
@@ -484,7 +627,7 @@ class TPFM2D(nn.Module):
         
         return grid
 
-    def integrate(
+    def multistep_deform(
         self,
         fixed: torch.Tensor,
         moving: torch.Tensor,
@@ -492,6 +635,19 @@ class TPFM2D(nn.Module):
         num_steps: int=8,
         forward: bool=True
     ) -> torch.Tensor:
+        """Applies multistep composition of deformations used in the inference.
+
+        Args:
+            fixed (torch.Tensor): Fixed image with size [B, 1, H, W]
+            moving (torch.Tensor): Moving image with size [B, 1, H, W]
+            id_grid (torch.Tensor): Identity grid with size [B, H, W, 2]
+            num_steps (int): Number of compositions, defaults to 8.
+            forward (bool): If True, computes the moving-to-fixed deformation,
+                            and computes fixed-to-moving if False
+        
+        Returns:
+            torch.Tensor: The compositional deformation with size [B, H, W, 2]
+        """
         if forward:
             time_steps = torch.linspace(0, 1, num_steps + 1, device=grid.device)
         else:
