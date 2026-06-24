@@ -1,0 +1,47 @@
+# experiment
+experiment_name: abdomen_unet_lam_10
+
+# data
+data:
+  name: abdomen
+  path: ../../Datasets/AbdomenCTCT
+  crop_x: 160
+  crop_y: 144
+  crop_z: 192
+
+# network configs
+model:
+  loss_type: ngf
+  architecture:
+    in_channels: 2
+    out_channels: 3
+    down_channels: [16, 32, 64, 128, 512]
+    up_channels: [512, 128, 64, 32, 16]
+    decoder_only: true
+    use_attention_gates: true
+    use_se_attention: true
+    time_emb_dim: 256
+
+# training configs
+training:
+  batch_size: 1
+  res_levels: 8
+  lr: 1e-4
+  epochs: 1000
+  nfe: 4
+  eval_interval: 1
+  checkpoints_path: checkpoints/abdomen/
+  logdir: logs/abdomen/
+
+# loss factors
+loss:
+  image_loss_coeff: 1.
+  cocycle_coeff: 10.
+
+# evaluation configs
+test:
+  down_factor: 2
+  nfe: 4
+  save_evals: true
+  save_evals_path: evals/abdomen/
+  logdir: logs/abdomen/

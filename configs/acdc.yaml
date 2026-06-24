@@ -1,0 +1,46 @@
+# experiment
+experiment_name: acdc_unet_lam_10
+
+# data
+data:
+  name: acdc
+  path: ../../Datasets/ACDC
+  crop_x: 128
+  crop_y: 128
+
+# network configs
+model:
+  loss_type: ncc
+  architecture:
+    in_channels: 2
+    out_channels: 2
+    down_channels: [16, 32, 64, 128, 512]
+    up_channels: [512, 128, 64, 32, 16]
+    decoder_only: true
+    use_attention_gates: true
+    use_se_attention: true
+    time_emb_dim: 256
+
+# training configs
+training:
+  batch_size: 1
+  res_levels: 8
+  lr: 1e-4
+  epochs: 500
+  nfe: 4
+  eval_interval: 1
+  checkpoints_path: checkpoints/acdc/
+  logdir: logs/acdc/
+
+# loss factors
+loss:
+  image_loss_coeff: 1.
+  cocycle_coeff: 10.
+
+# evaluation configs
+test:
+  down_factor: 1
+  nfe: 4
+  save_evals: true
+  save_evals_path: evals/acdc/
+  logdir: logs/acdc/

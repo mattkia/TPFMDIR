@@ -1,0 +1,47 @@
+# experiment
+experiment_name: lungct_unet_lam_10
+
+# data
+data:
+  name: lungct
+  path: ../../Datasets/LungCT/
+  crop_x: null
+  crop_y: null
+  crop_z: null
+
+# network configs
+model:
+  loss_type: ngf
+  architecture:
+    in_channels: 2
+    out_channels: 3
+    down_channels: [32, 32, 64, 128]
+    up_channels: [128, 64, 32, 32]
+    decoder_only: true
+    use_attention_gates: true
+    use_se_attention: true
+    time_emb_dim: 128
+
+# training configs
+training:
+  batch_size: 1
+  res_levels: 8
+  lr: 1e-4
+  epochs: 400
+  nfe: 4
+  eval_interval: 1
+  checkpoints_path: checkpoints/lungct/
+  logdir: logs/lungct/
+
+# loss factors
+loss:
+  image_loss_coeff: 1.
+  cocycle_coeff: 10.
+
+# evaluation configs
+test:
+  down_factor: 2
+  nfe: 4
+  save_evals: true
+  save_evals_path: evals/lungct/
+  logdir: logs/lungct/

@@ -1,0 +1,10 @@
+__pycache__
+*.pt
+*.ipynb
+evals/
+logs/
+notebooks/
+*.png
+.env
+tmp/
+checkpoints/
