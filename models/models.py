@@ -1,3 +1,7 @@
+"""Implementation of 2D/3D TPFM-DIR including the cocycle regularization
+and time-dependent similarity measurements
+"""
+
 import torch
 import random
 
@@ -8,9 +12,9 @@ from typing import Tuple
 from torch.utils.checkpoint import checkpoint
 
 
-from metrics import NCCLoss
-from metrics import NGFLoss
-from metrics import MINDLoss
+from metrics import (NCCLoss,
+                     NGFLoss,
+                     MINDLoss)
 
 
 class TPFM(nn.Module):

@@ -1,15 +1,17 @@
+"""Implementation of time-dependent networks to be used
+as the backbones for TPFM-DIR
+"""
 import torch
 
 import torch.nn as nn
 
-from typing import List
-from typing import Tuple
+from typing import List, Tuple
 
-from models.modules import ConvBlock3D
-from models.modules import ConvBlock2D
-from models.modules import AttentionGate3D
-from models.modules import AttentionGate2D
-from models.modules import SinusoidalPositionEmbeddings
+from models.modules import (ConvBlock3D,
+                            ConvBlock2D,
+                            AttentionGate3D,
+                            AttentionGate2D,
+                            SinusoidalPositionEmbeddings)
 
 
 
@@ -17,7 +19,7 @@ class UNet2D(nn.Module):
     def __init__(
         self,
         in_channels: int=2,
-        out_channels: int=3, 
+        out_channels: int=2, 
         down_channels: List | Tuple=(32, 32, 32), 
         up_channels: List | Tuple=(32, 32, 32), 
         time_emb_dim: int=32,
@@ -25,6 +27,25 @@ class UNet2D(nn.Module):
         use_attention_gates: bool=True,
         use_se_attention: bool=False
     ) -> None:
+        """Initializes a 2D time-embedded UNet
+
+        Args:
+            in_channels (int): The number of channels of the input images.
+                               Defaults to 2 since images are concatenated
+                               on channel dimension
+            out_channels (int): The number of channels for the output.
+                                Defaults to 2, since for 2D registration
+                                the deformation has 2 dimensions
+            down_channels (List[int]): Hidden channels for the encoder
+            up_channels (List[int]): Hidden channels for the decoder
+            time_emb_dim (int): Time embedding dimension
+            decoder_only (bool): If True, only the decoder will have time
+                                 context injection (recommended)
+            use_attention_gates (bool): If True, skip connections will have
+                                        attention gates
+            use_se_attention (bool): If True, layers will have channel attention
+                                     (Squeeze and Excitation)
+        """
         super().__init__()
 
         self.use_attn_gate = use_attention_gates
@@ -89,6 +110,15 @@ class UNet2D(nn.Module):
         s: torch.Tensor,
         t: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): The input tensor with size [B, in_channels, H, W]
+            s (torch.Tensor): A sampled time with size [B]
+            t (torch.Tensor): A sampled time with size [B]
+        
+        Returns:
+            torch.Tensor: UNet output with size [B, out_channels, H, W]
+        """
         # Embedd time
         s_ctx = self.s_embedder(self.time_pos_emb(s * 1000))
         t_ctx = self.t_embedder(self.time_pos_emb(t * 1000))
@@ -118,9 +148,6 @@ class UNet2D(nn.Module):
 
 
 class UNet3D(nn.Module):
-    """
-    A simplified variant of the Unet architecture.
-    """
     def __init__(
         self,
         in_channels: int=2,
@@ -132,6 +159,25 @@ class UNet3D(nn.Module):
         use_attention_gates: bool=True,
         use_se_attention: bool=False
     ) -> None:
+        """Initializes a 3D time-embedded UNet
+
+        Args:
+            in_channels (int): The number of channels of the input images.
+                               Defaults to 2 since images are concatenated
+                               on channel dimension
+            out_channels (int): The number of channels for the output.
+                                Defaults to 3, since for 3D registration
+                                the deformation has 3 dimensions
+            down_channels (List[int]): Hidden channels for the encoder
+            up_channels (List[int]): Hidden channels for the decoder
+            time_emb_dim (int): Time embedding dimension
+            decoder_only (bool): If True, only the decoder will have time
+                                 context injection (recommended)
+            use_attention_gates (bool): If True, skip connections will have
+                                        attention gates
+            use_se_attention (bool): If True, layers will have channel attention
+                                     (Squeeze and Excitation)
+        """
         super().__init__()
 
         self.use_attn_gate = use_attention_gates
@@ -196,6 +242,15 @@ class UNet3D(nn.Module):
         s: torch.Tensor,
         t: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): The input tensor with size [B, in_channels, D, H, W]
+            s (torch.Tensor): A sampled time with size [B]
+            t (torch.Tensor): A sampled time with size [B]
+        
+        Returns:
+            torch.Tensor: UNet output with size [B, out_channels, D, H, W]
+        """
         # Embedd time
         s_ctx = self.s_embedder(self.time_pos_emb(s * 1000))
         t_ctx = self.t_embedder(self.time_pos_emb(t * 1000))

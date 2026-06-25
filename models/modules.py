@@ -1,3 +1,7 @@
+"""Implementation of diffent neural modules used to build the
+time-embedded backbones for TPFM-DIR
+"""
+
 import math
 import torch
 
@@ -5,23 +9,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-
-def modulate(
-    x: torch.Tensor,
-    shift: torch.Tensor,
-    scale: torch.Tensor
-) -> torch.Tensor:
-    out = x * (1 + scale.unsqueeze(1)) + shift.unsqueeze(1)
-
-    return out
-
-
-
 class SinusoidalPositionEmbeddings(nn.Module):
     def __init__(
         self,
         dim: int
     ) -> None:
+        """
+        Args:
+            dim (int): Sinusoidal embedding dimension
+        """
         super().__init__()
 
         self.dim = dim
@@ -30,6 +26,13 @@ class SinusoidalPositionEmbeddings(nn.Module):
         self,
         time
     ) -> torch.Tensor:
+        """
+        Args:
+            time (torch.Tensor): Input time with size [B]
+
+        Returns:
+            torch.Tensor: The sinusoidally embedded tensor with size [B, dim]
+        """
         device = time.device
         half_dim = self.dim // 2
 
@@ -42,11 +45,18 @@ class SinusoidalPositionEmbeddings(nn.Module):
 
 
 class SEBlock3D(nn.Module):
+    """Implementation of 3D Squeeze and Excitation layer
+    """
     def __init__(
         self,
         channels: int,
         reduction: int=8
     ) -> None:
+        """
+        Args:
+            channels (int): The input channels
+            reduction (int): The channel reduction ratio
+        """
         super().__init__()
 
         hidden = max(channels // reduction, 1)
@@ -63,6 +73,13 @@ class SEBlock3D(nn.Module):
         self,
         x: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Input tensor with size [B, C, D, H, W]
+
+        Returns:
+            torch.Tensor: Channel attended tensor with size [B, C, D, H, W]
+        """
         w = self.avg_pool(x)
         w = self.fc(w)
 
@@ -70,11 +87,18 @@ class SEBlock3D(nn.Module):
 
 
 class SEBlock2D(nn.Module):
+    """Implementation of 2D Squeeze and Excitation layer
+    """
     def __init__(
         self,
         channels: int,
         reduction: int = 8
     ) -> None:
+        """
+        Args:
+            channels (int): The input channels
+            reduction (int): The channel reduction ratio
+        """
         super().__init__()
 
         hidden = max(channels // reduction, 1)
@@ -91,6 +115,13 @@ class SEBlock2D(nn.Module):
         self,
         x: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Input tensor with size [B, C, D, H, W]
+
+        Returns:
+            torch.Tensor: Channel attended tensor with size [B, C, D, H, W]
+        """
         w = self.avg_pool(x)
         w = self.fc(w)
 
@@ -104,6 +135,14 @@ class AttentionGate3D(nn.Module):
         channels_g: int,
         inter_channels: int=None
     ) -> None:
+        """
+        Args:
+            channels_l (int): Number of channels in the encoder (lower) features
+            channels_g (int): Number of channels in the decoder (gating) features
+
+            inter_channels (int): Channels for intermediate computation; defaults
+                                  to half of channels_l.
+        """
         super().__init__()
 
         if inter_channels is None:
@@ -131,8 +170,12 @@ class AttentionGate3D(nn.Module):
         l: torch.Tensor
     ) -> torch.Tensor:
         """
-        g: decoded features
-        l: encoder skiped features
+        Args:
+            g (torch.Tensor): Decoder (gating) features tensor
+            l (torch.Tensor): Encoder skip features tensor to modulate
+
+        Returns:
+            torch.Tensor: Modulated encoder features of same shape as "l"
         """
 
         attention = self.psi(self.weights_g(g) + self.weights_x(l))
@@ -149,6 +192,14 @@ class AttentionGate2D(nn.Module):
         channels_g: int,
         inter_channels: int=None
     ) -> None:
+        """
+        Args:
+            channels_l (int): Number of channels in the encoder (lower) features
+            channels_g (int): Number of channels in the decoder (gating) features
+
+            inter_channels (int): Channels for intermediate computation; defaults
+                                  to half of channels_l.
+        """
         super().__init__()
 
         if inter_channels is None:
@@ -176,8 +227,12 @@ class AttentionGate2D(nn.Module):
         l: torch.Tensor
     ) -> torch.Tensor:
         """
-        g: decoded features
-        l: encoder skiped features
+        Args:
+            g (torch.Tensor): Decoder (gating) features tensor
+            l (torch.Tensor): Encoder skip features tensor to modulate
+
+        Returns:
+            torch.Tensor: Modulated encoder features of same shape as "l"
         """
 
         attention = self.psi(self.weights_g(g) + self.weights_x(l))
@@ -198,6 +253,18 @@ class ConvBlock3D(nn.Module):
         down: bool=True,
         use_se: bool=False
     ) -> None:
+        """
+        Args:
+            in_channels (int): Input channels
+            out_channels (int): Output channels
+            skip_channels (int): Number of channels coming in from skip connection
+                                 If None, it assumes the skip channels are the same
+                                 as in_channels
+            time_emb_dim (int): Dimension of the input time embedding
+            up (bool): If the layer should be used for decoder and upsampling
+            down (bool): If the layer should be used for encoder and downsampling
+            use_se (bool): If the layer should use squeeze and excitation
+        """
         super().__init__()
 
         self.time_emb_dim = time_emb_dim
@@ -236,6 +303,19 @@ class ConvBlock3D(nn.Module):
         x:torch.Tensor,
         ctx: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Input tensor with size [B, in_channels, D, H, W]
+            ctx (torch.Tensor): Time context with size [B, time_emb_dim]
+        
+        Returns:
+            torch.Tensor: Layer output with size [B, out_channel, X, Y, Z]
+
+            If up=True:
+                X, Y, Z = 2D, 2H, 2W
+            If down=True:
+                X, Y, Z = D//2, H//2, W//2
+        """
         # First Conv
         h = self.bnorm1(self.act(self.conv1(x)))    
         
@@ -268,6 +348,18 @@ class ConvBlock2D(nn.Module):
         down: bool=True,
         use_se: bool=False
     ) -> None:
+        """
+        Args:
+            in_channels (int): Input channels
+            out_channels (int): Output channels
+            skip_channels (int): Number of channels coming in from skip connection
+                                 If None, it assumes the skip channels are the same
+                                 as in_channels
+            time_emb_dim (int): Dimension of the input time embedding
+            up (bool): If the layer should be used for decoder and upsampling
+            down (bool): If the layer should be used for encoder and downsampling
+            use_se (bool): If the layer should use squeeze and excitation
+        """
         super().__init__()
 
         self.time_emb_dim = time_emb_dim
@@ -306,6 +398,19 @@ class ConvBlock2D(nn.Module):
         x:torch.Tensor,
         ctx: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Input tensor with size [B, in_channels, H, W]
+            ctx (torch.Tensor): Time context with size [B, time_emb_dim]
+        
+        Returns:
+            torch.Tensor: Layer output with size [B, out_channel, X, Y]
+
+            If up=True:
+                X, Y = 2H, 2W
+            If down=True:
+                X, Y = H//2, W//2 
+        """
         # First Conv
         h = self.bnorm1(self.act(self.conv1(x)))    
         
