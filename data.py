@@ -30,14 +30,12 @@ def get_dataset(
     """Receives the configuration dictionary and returns the dataset
     specified in the configs along with the determined specifications.
     
-    :param config:
-        An instance of the configs
-
-    :param train:
-        Defaults to True; dataset mode (train/val/test)
+    Args:
+        config (dict): An instance of the configs
+        train (bool): Defaults to True; dataset mode (train/val/test)
         
-    :returns:
-        Torch friendly dataset of the specified data.
+    Returns:
+        Dataset: Torch friendly dataset of the specified data.
     """
     name = config.get('name')
     dataset_path = config.get('path')
@@ -97,26 +95,19 @@ class RegistrationDataset(ABC, Dataset):
         mode: str='train'
     ):
         """
-        :param dataset_path:
-            Path to where the OASIS dataset is stored.
+        Args:
+            dataset_path (str): Path to where the OASIS dataset is stored.
+            crop_x (int): The size of image along x direction after center cropping
+                          [D, H, W] -> [crop_x, H, W]
 
-        :param crop_x:
-            The size of image along x direction after center cropping
-            [D, H, W] -> [crop_x, H, W]
+            crop_y (int): The size of image along y direction after center cropping
+                          [D, H, W] -> [D, crop_y, W]
 
-        :param crop_y:
-            The size of image along y direction after center cropping
-            [D, H, W] -> [D, crop_y, W]
+            crop_z (int): The size of image along z direction after center cropping
+                          [D, H, W] -> [D, H, crop_z]
 
-        :param crop_z:
-            The size of image along z direction after center cropping
-            [D, H, W] -> [D, H, crop_z]
-
-        :param normalize:
-            If true, normalizes the intesities into [0, 1] range.
-        
-        :param mode:
-            The dataset to return (train/val/test)
+            normalize (bool): If true, normalizes the intesities into [0, 1] range.        
+            mode (str): The dataset to return (train/val/test)
         """
         
         self.dataset_path = dataset_path
@@ -133,9 +124,9 @@ class RegistrationDataset(ABC, Dataset):
         the (fixed, moving) ids for train, val. and test
         modes.
 
-        :returns:
-            A list of (fixed_id, moving_id) corresponding to
-            the self.mode (i.e., train, val, test)
+        Returns:
+            list[tuple[str, str]]: A list of (fixed_id, moving_id) corresponding to
+                                   the self.mode (i.e., train, val, test)
         """
         pass
 
@@ -149,15 +140,14 @@ class RegistrationDataset(ABC, Dataset):
         and returns the center-cropped fixed and moving images 
         with the segmentation masks or keypoints.
         
-        :param fixed_id:
-            The id of the fixed image (e.g., 0001)
+        Args:
+            fixed_id (str): The id of the fixed image (e.g., 0001)
 
-        :param moving_id:
-            The id of the moving image (e.g., 0002)
+            moving_id (str): The id of the moving image (e.g., 0002)
 
-        :returns:
-            A four-tupple containing the fixed image,
-            moving image, fixed mask, and moving mask
+        Returns:
+            tuple[np.ndarray]: A four-tupple containing the fixed image,
+                               moving image, fixed mask, and moving mask
         """
         pass
 
@@ -194,15 +184,15 @@ class OASISRegistration(RegistrationDataset):
         fixed_path = os.path.join(os.path.join(self.dataset_path, f'OASIS_OAS1_{fixed_id}_MR1'))
         moving_path = os.path.join(os.path.join(self.dataset_path, f'OASIS_OAS1_{moving_id}_MR1'))
         
-        # loading the fixed image
+        # Load the fixed image
         fixed_img = nib.load(os.path.join(fixed_path, 'aligned_norm.nii.gz')).get_fdata()
         fixed_seg35 = nib.load(os.path.join(fixed_path, 'aligned_seg35.nii.gz')).get_fdata()
         
-        # loading the moving image
+        # Load the moving image
         moving_img = nib.load(os.path.join(moving_path, 'aligned_norm.nii.gz')).get_fdata()
         moving_seg35 = nib.load(os.path.join(moving_path, 'aligned_seg35.nii.gz')).get_fdata()
         
-        # croppin the image if specified
+        # Crop the image if specified
         fixed_img, fixed_seg35, moving_img, moving_seg35 = crop([fixed_img, fixed_seg35, moving_img, moving_seg35],
                                                                 self.crop_x, self.crop_y, self.crop_z)
         
@@ -224,7 +214,7 @@ class OASISRegistration(RegistrationDataset):
             val_pairs = randomized_pairs(subject_ids[256: 306], 10, 10)
             test_pairs = randomized_pairs(subject_ids[306:], 15, 15)
 
-            # saving the information for future use
+            # Save the information for future use
             oasis_train_test = {'train': train_pairs,
                                 'val': val_pairs,
                                 'test': test_pairs}
@@ -265,15 +255,15 @@ class CANDIRegistration(RegistrationDataset):
         fixed_path = os.path.join(self.dataset_path, f'SchizBull_2008/{fixed_cat}/{fixed_id}/MNI152_2mm_Linear')
         moving_path = os.path.join(self.dataset_path, f'SchizBull_2008/{moving_cat}/{moving_id}/MNI152_2mm_Linear')
         
-        # loading the fixed image
+        # Load the fixed image
         fixed_img = nib.load(os.path.join(fixed_path, f'{fixed_id}_linear_MRI.nii.gz')).get_fdata()
         fixed_seg = nib.load(os.path.join(fixed_path, f'{fixed_id}_linear_SEG.nii.gz')).get_fdata()
         
-        # loading the moving image
+        # Load the moving image
         moving_img = nib.load(os.path.join(moving_path, f'{moving_id}_linear_MRI.nii.gz')).get_fdata()
         moving_seg = nib.load(os.path.join(moving_path, f'{moving_id}_linear_SEG.nii.gz')).get_fdata()
         
-        # cropping the image if specified
+        # Crop the image if specified
         fixed_img = np.pad(fixed_img, ((2, 3), (2, 1), (2, 3)))
         fixed_seg = np.pad(fixed_seg, ((2, 3), (2, 1), (2, 3)))
         moving_img = np.pad(moving_img, ((2, 3), (2, 1), (2, 3)))
@@ -286,7 +276,7 @@ class CANDIRegistration(RegistrationDataset):
 
     def setup_fixed_moving_ids(self):
         if os.path.exists('tmp/candi_train_val_test.json'):
-            # loading the existing information
+            # Load the existing information
             with open('tmp/candi_train_val_test.json', 'r') as handle:
                 return json.load(handle)[self.mode]
                     
@@ -308,12 +298,11 @@ class CANDIRegistration(RegistrationDataset):
             val_pairs = randomized_pairs(all_ids[train_length: train_length + val_length], 5, 5)
             test_pairs = randomized_pairs(all_ids[train_length + val_length:], 5, 5)
 
-            # saving the information for future use
             candi_train_test = {'train': train_pairs,
                                 'val': val_pairs,
                                 'test': test_pairs}
             
-            # saving the information for future use
+            # Save the information for future use
             os.makedirs('tmp', exist_ok=True)
             with open('tmp/candi_train_val_test.json', 'w') as handle:
                 json.dump(candi_train_test, handle)
@@ -331,21 +320,21 @@ class LPBA40Registration(RegistrationDataset):
     ) -> tuple[np.ndarray]:
         image_path = os.path.join(self.dataset_path, f'Delineation')
         
-        # loading the fixed image
+        # Load the fixed image
         fixed_img = nib.load(os.path.join(image_path, f'{fixed_id}/{fixed_id}.delineation.skullstripped.img')).get_fdata()[..., 0]
         fixed_seg = nib.load(os.path.join(image_path, f'{fixed_id}/{fixed_id}.delineation.structure.label.img')).get_fdata()[..., 0]
         
-        # loading the moving image
+        # Load the moving image
         moving_img = nib.load(os.path.join(image_path, f'{moving_id}/{moving_id}.delineation.skullstripped.img')).get_fdata()[..., 0]
         moving_seg = nib.load(os.path.join(image_path, f'{moving_id}/{moving_id}.delineation.structure.label.img')).get_fdata()[..., 0]
 
-        # modifying the image shape
+        # Modify the image shape
         fixed_img = fixed_img.transpose(0, 2, 1)
         fixed_seg = fixed_seg.transpose(0, 2, 1)
         moving_img = moving_img.transpose(0, 2, 1)
         moving_seg = moving_seg.transpose(0, 2, 1)
         
-        # croppin the image if specified
+        # Crop the image if specified
         fixed_img, fixed_seg, moving_img, moving_seg = crop([fixed_img, fixed_seg, moving_img, moving_seg],
                                                             self.crop_x, self.crop_y, self.crop_z)
         moving_img, moving_seg = affine_register(fixed_img, moving_img, moving_seg)
@@ -354,7 +343,7 @@ class LPBA40Registration(RegistrationDataset):
 
     def setup_fixed_moving_ids(self):
         if os.path.exists('tmp/lpba_train_val_test.json'):
-            # loading the existing information
+            # Load the existing information
             with open('tmp/lpba_train_val_test.json', 'r') as handle:
                 return json.load(handle)[self.mode]
                     
@@ -367,7 +356,7 @@ class LPBA40Registration(RegistrationDataset):
             val_pairs = randomized_pairs(subject_ids[20: 25], 3, 2)
             test_pairs = randomized_pairs(subject_ids[25:], 8, 7)
             
-            # saving the information for future use
+            # Save the information for future use
             lpba_train_test = {'train': train_pairs,
                                'val': val_pairs,
                                'test': test_pairs}
@@ -387,15 +376,15 @@ class IXIRegistration(RegistrationDataset):
         fixed_id: str,
         moving_id: str,
     ) -> tuple[np.ndarray]:
-        # loading the fixed image
+        # Load the fixed image
         fixed_img = nib.load(os.path.join(self.dataset_path, f'{fixed_id}/norm.mgz')).get_fdata()
         fixed_seg = nib.load(os.path.join(self.dataset_path, f'{fixed_id}/aseg.mgz')).get_fdata()
         
-        # loading the moving image
+        # Load the moving image
         moving_img = nib.load(os.path.join(self.dataset_path, f'{moving_id}/norm.mgz')).get_fdata()
         moving_seg = nib.load(os.path.join(self.dataset_path, f'{moving_id}/aseg.mgz')).get_fdata()
         
-        # croppin the image if specified
+        # Crop the image if specified
         fixed_img, fixed_seg, moving_img, moving_seg = crop([fixed_img, fixed_seg, moving_img, moving_seg],
                                                             self.crop_x, self.crop_y, self.crop_z)
         
@@ -403,7 +392,7 @@ class IXIRegistration(RegistrationDataset):
     
     def setup_fixed_moving_ids(self):
         if os.path.exists('tmp/ixi_train_val_test.json'):
-            # loading the existing information
+            # Load the existing information
             with open('tmp/ixi_train_val_test.json', 'r') as handle:
                 return json.load(handle)[self.mode]
                     
@@ -416,10 +405,11 @@ class IXIRegistration(RegistrationDataset):
             val_pairs = randomized_pairs(subject_ids[20: 25], 3, 2)
             test_pairs = randomized_pairs(subject_ids[25:], 8, 7)
             
-            # saving the information for future use
             ixi_train_test = {'train': train_pairs,
                               'val': val_pairs,
                               'test': test_pairs}
+
+            # Save the information for future use
             os.makedirs('tmp', exist_ok=True)
             with open('tmp/ixi_train_val_test.json', 'w') as handle:
                 json.dump(ixi_train_test, handle)
@@ -437,15 +427,15 @@ class MindboggleRegistration(RegistrationDataset):
     ) -> tuple[np.ndarray]:
         img_path = os.path.join(self.dataset_path, 'images')
         label_path = os.path.join(self.dataset_path, 'labels')
-        # loading the fixed image
+        # Load the fixed image
         fixed_img = nib.load(os.path.join(img_path, f'{fixed_id}.nii.gz')).get_fdata().transpose(0, 2, 1)
         fixed_seg = nib.load(os.path.join(label_path, f'{fixed_id}.nii.gz')).get_fdata().transpose(0, 2, 1)
         
-        # loading the moving image
+        # Load the moving image
         moving_img = nib.load(os.path.join(img_path, f'{moving_id}.nii.gz')).get_fdata().transpose(0, 2, 1)
         moving_seg = nib.load(os.path.join(label_path, f'{moving_id}.nii.gz')).get_fdata().transpose(0, 2, 1)
         
-        # croppin the image if specified
+        # Crop the image if specified
         fixed_img, fixed_seg, moving_img, moving_seg = crop([fixed_img, fixed_seg, moving_img, moving_seg],
                                                             self.crop_x, self.crop_y, self.crop_z)
         
@@ -453,7 +443,7 @@ class MindboggleRegistration(RegistrationDataset):
     
     def setup_fixed_moving_ids(self):
         if os.path.exists('tmp/mindboggle_train_val_test.json'):
-            # loading the existing information
+            # Load the existing information
             with open('tmp/mindboggle_train_val_test.json', 'r') as handle:
                 return json.load(handle)[self.mode]
             
@@ -468,10 +458,11 @@ class MindboggleRegistration(RegistrationDataset):
             val_pairs = randomized_pairs(subject_ids[80: 86], 2, 2)
             test_pairs = randomized_pairs(subject_ids[86:], 7, 7)
 
-            # saving the information for future use
             mindboggle_train_test = {'train': train_pairs,
                                      'val': val_pairs,
                                      'test': test_pairs}
+
+            # Save the information for future use
             os.makedirs('tmp', exist_ok=True)
             with open('tmp/mindboggle_train_val_test.json', 'w') as handle:
                 json.dump(mindboggle_train_test, handle)
@@ -493,14 +484,14 @@ class LungCTRegistration(RegistrationDataset):
         fixed_keypoints_path = fixed_path.replace('images', 'keypoints')
         fixed_keypoints_path = fixed_keypoints_path.replace('.nii.gz', '.csv')
 
-        # settin up the moving image, mask, and keypoints path
+        # Set up the moving image, mask, and keypoints path
         moving_path = moving_id.split('./')[1]
         moving_path = os.path.join(self.dataset_path, moving_path)
 
         moving_keypoints_path = moving_path.replace('images', 'keypoints')
         moving_keypoints_path = moving_keypoints_path.replace('.nii.gz', '.csv')
 
-        # loading the fixed image, mask, and keypoints
+        # Load the fixed image, mask, and keypoints
         fixed_img = nib.load(fixed_path).get_fdata().clip(-800, 700)
 
         fixed_keypoints = pd.read_csv(fixed_keypoints_path)
@@ -508,7 +499,7 @@ class LungCTRegistration(RegistrationDataset):
         fixed_keypoints[['x', 'y', 'z']] = fixed_keypoints[['z', 'y', 'x']]
         fixed_keypoints = fixed_keypoints.values
 
-        # loading the moving image, mask, and keypoints
+        # Load the moving image, mask, and keypoints
         moving_img = nib.load(moving_path).get_fdata().clip(-800, 700)
 
         moving_keypoints = pd.read_csv(moving_keypoints_path)
@@ -577,7 +568,7 @@ class AbdomenCTRegistration(RegistrationDataset):
 
     def setup_fixed_moving_ids(self):
         if os.path.exists('tmp/abdomen_train_val_test.json'):
-            # loading the existing information
+            # Load the existing information
             with open('tmp/abdomen_train_val_test.json', 'r') as handle:
                 return json.load(handle)[self.mode]
 
@@ -588,10 +579,11 @@ class AbdomenCTRegistration(RegistrationDataset):
             val_pairs = randomized_pairs(subject_ids[18: 20], 1, 1)
             test_pairs = randomized_pairs(subject_ids[20:], 5, 5)
 
-            # saving the information for future use
             abdomen_train_test = {'train': train_pairs,
                                   'val': val_pairs,
                                   'test': test_pairs}
+
+            # Save the information for future use
             os.makedirs('tmp', exist_ok=True)
             with open('tmp/abdomen_train_val_test.json', 'w') as handle:
                 json.dump(abdomen_train_test, handle)
