@@ -10,10 +10,10 @@ parser.add_argument('-c', '--config',
                     type=str,
                     default='acdc_unet',
                     help='JSON file for configuration')
-# parse configs
+
 args = parser.parse_args()
 
-# configurations
+
 torch.cuda.empty_cache()
 with open(f'configs/{args.config}.yaml', 'r') as handle:
     config = yaml.safe_load(handle)

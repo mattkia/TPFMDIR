@@ -14,9 +14,9 @@ from torch.utils.data import DataLoader
 from metrics import (HD95,
                      Dice,
                      ASSD,
-                     TRE2d,
+                     TRE2D,
                      SDLogJ,
-                     SSIM2d,
+                     SSIM2D,
                      NCCLoss,
                      DicePerStructure,
                      JacobianDeterminant)
@@ -103,7 +103,7 @@ class DiceTrainer:
 
         # defining the metrics
         self.hd95 = HD95()
-        self.ssim = SSIM2d()
+        self.ssim = SSIM2D()
         self.dice1 = Dice(structured=True)
         self.dice2 = Dice(structured=False)
         self.jac_det = JacobianDeterminant()
@@ -157,10 +157,11 @@ class DiceTrainer:
                     avg_loss += total_loss.item()
                 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
-                                                         moving,
-                                                         grid,
-                                                         num_steps=self.num_steps)
+                    deformation = self.network.multistep_deform(
+                        fixed,
+                        moving,
+                        grid,
+                        num_steps=self.num_steps)
 
                     moving_seg_warped = warp(moving_seg, deformation, True)
 
@@ -183,10 +184,11 @@ class DiceTrainer:
                 moving_seg = sample[4].to(self.device)
 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
-                                                         moving,
-                                                         grid,
-                                                         num_steps=self.num_steps)
+                    deformation = self.network.multistep_deform(
+                        fixed,
+                        moving,
+                        grid,
+                        num_steps=self.num_steps)
 
                     moving_warped = warp(moving, deformation)
                     moving_seg_warped = warp(moving_seg, deformation, True)
@@ -292,8 +294,8 @@ class TRETrainer:
         self.cocycle_loss_coeff = float(loss_config.get('cocycle_coeff'))
 
         # defining the metrics
-        self.tre = TRE2d()
-        self.ssim = SSIM2d()
+        self.tre = TRE2D()
+        self.ssim = SSIM2D()
         self.jac_det = JacobianDeterminant()
 
     def run(self):
@@ -343,10 +345,11 @@ class TRETrainer:
                     avg_loss += total_loss.item()
                 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
-                                                         moving,
-                                                         grid,
-                                                         num_steps=self.num_steps)
+                    deformation = self.network.multistep_deform(
+                        fixed,
+                        moving,
+                        grid,
+                        num_steps=self.num_steps)
 
                     tf_tre = self.tre(fixed_kp.clone(),
                                       moving_kp.clone(),
@@ -370,10 +373,11 @@ class TRETrainer:
                 moving_kp = sample[4].to(self.device)
 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
-                                                         moving,
-                                                         grid,
-                                                         num_steps=self.num_steps)
+                    deformation = self.network.multistep_deform(
+                        fixed,
+                        moving,
+                        grid,
+                        num_steps=self.num_steps)
 
                     f_tre = self.tre(fixed_kp.clone(),
                                      moving_kp.clone(),
@@ -462,7 +466,7 @@ class DiceTester:
         # defining the metrics
         self.hd95 = HD95()
         self.assd = ASSD()
-        self.ssim = SSIM2d()
+        self.ssim = SSIM2D()
         self.sdlogj = SDLogJ()
         self.dice1 = Dice(structured=True)
         self.dice2 = Dice(structured=False)
@@ -503,8 +507,8 @@ class DiceTester:
             fixed_seg = sample[3].to(self.device)
             moving_seg = sample[4].to(self.device)
             
-            forward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps)
-            backward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps, forward=False)
+            forward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps)
+            backward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps, forward=False)
 
             moving_warped = warp(moving, forward_deformation)
             moving_seg_warped = warp(moving_seg, forward_deformation, True)
@@ -757,8 +761,8 @@ class TRETester:
         self.network.load_state_dict(self.weights)
 
         # defining the metrics
-        self.tre = TRE2d()
-        self.ssim = SSIM2d()
+        self.tre = TRE2D()
+        self.ssim = SSIM2D()
         self.sdlogj = SDLogJ()
         self.jac_det = JacobianDeterminant()
 
@@ -788,8 +792,8 @@ class TRETester:
             fixed_kp = sample[3].to(self.device)
             moving_kp = sample[4].to(self.device)
             
-            forward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps)
-            backward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps, forward=False)
+            forward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps)
+            backward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps, forward=False)
             
             moving_warped = warp(moving, forward_deformation)
             fixed_warped = warp(fixed, backward_deformation)

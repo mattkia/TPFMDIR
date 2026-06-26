@@ -5,10 +5,8 @@ import random
 import numpy as np
 import SimpleITK as sitk
 
-from skimage import exposure
-from skimage import transform
-
 from itertools import product
+from skimage import transform
 
 
 def randomized_pairs(
@@ -21,24 +19,20 @@ def randomized_pairs(
     The method then randomly samples from the ids and pairs up
     the ids of the moving and fixed images
     
-    :param ids:
-        A list of strings containing the ids of all images;
-        e.g., 0001, 0034, 0411
+    Args:
+        ids (list[str]): A list of strings containing the ids of all images;
+                         e.g., 0001, 0034, 0411
 
-    :param num_moving_imgs:
-        The number of images to be considered as the moving
-        image
+        num_moving_imgs (int): The number of images to be considered as the moving image
 
-    :param num_fixed_imgs:
-        The number of images to be considered as the atlas
-        or fixed images
+        num_fixed_imgs (int): The number of images to be considered as the atlas or fixed images
         
-    :returns:
-        A list of the form [(f_id1, m_id1), (f_id2, m_id2), ...],
-        where m_id is the id of the moving image and the f_id is
-        the id of the fixed image
+    Returns:
+        list[tuple[str, str]]: A list of the form [(f_id1, m_id1), (f_id2, m_id2), ...],
+                               where m_id is the id of the moving image and the f_id is
+                               the id of the fixed image
     """
-    # randomly choose the moving images
+    # Randomly choose the moving images
     moving_imgs_ids = random.sample(ids, num_moving_imgs)
     remained_ids = [i for i in ids if i not in moving_imgs_ids]
     fixed_ids = random.sample(remained_ids, num_fixed_imgs)
@@ -50,12 +44,11 @@ def randomized_pairs(
 def get_id_grid(shape: tuple) -> torch.Tensor:
     """Constructs a 2D or 3D identity grid
 
-    :param shape:
-        Spatial dimensions of the image.
-        [D, H, W] or [H, W]
+    Args:
+        shape (int): The shape of the grid; [D, H, W] or [H, W]
 
-    :returns:
-        An identity grid with shape [D, H, W, 3].
+    Returns:
+        torch.Tensor: An identity grid with shape [D, H, W, 3] or [H, W, 2].
     """
     if len(shape) == 3:
         d, h, w = shape
@@ -85,20 +78,14 @@ def crop(
     moving image, moving segmentation) and thecropping information
     and crops the images along each axis (if specified).
     
-    :param imgs_list:
-        A list containing the 3D images as numpy arrays.
-
-    :param crop_x:
-        The new size of the image along the x direction.
-
-    :param crop_y:
-        The new size of the image along the y direction.
-
-    :param crop_z:
-        The new size of the image along the z direction.
+    Args:
+        imgs_list (list[np.ndarray]): A list containing the 3D images as numpy arrays.
+        crop_x (int): The new size of the image along the x direction.
+        crop_y (int): The new size of the image along the y direction.
+        crop_z (int): The new size of the image along the z direction.
         
-    :returns:
-        A list of cropped images.
+    Returns:
+        list[np.ndarray]: A list of cropped images.
     """
     if crop_x is not None:
         imgs_list = crop_axis(imgs_list, crop_x, 0)
@@ -118,18 +105,16 @@ def crop_axis(
 ) -> list[np.ndarray]:
     """Crops the given list of image along the specified axis.
     
-    :param imgs_list:
-        A list of images to be cropped.
+    Args:
+        imgs_list (list[np.ndarray]): A list of images to be cropped.
 
-    :param crop_size:
-        The new size of the image along the given axis.
+        crop_size (int): The new size of the image along the given axis.
 
-    :param axis:
-        Defaults to 0; The axis along which the cropping
-        should be done (axis must be eiher 0, 1, or 2)
+        axis (int): Defaults to 0; The axis along which the cropping
+              should be done (axis must be eiher 0, 1, or 2)
 
-    :returns:
-        A list of the cropped images along the specified axis
+    Returns:
+        list[np.ndarray]: A list of the cropped images along the specified axis
     """
     
     size = imgs_list[0].shape[axis]
@@ -150,20 +135,43 @@ def crop_axis(
 def image_norm(img: np.ndarray) -> np.ndarray:
     """Applies min-max normalization on an image.
 
-    :param img:
-        The unnormalized input image
+    Args:
+        img (np.ndarray): The unnormalized input image
 
-    :returns:
-        The min-max intensity normalized image.
+    Returns:
+        np.ndarray: The min-max intensity normalized image.
     """
     
     img = (img - img.min()) / (img.max() - img.min())
     
     return img
 
-def resampler_by_transform(im_sitk, dvf_t, im_ref=None, 
-                           default_pixel_value=0, 
-                           interpolator=sitk.sitkBSpline):
+def resampler_by_transform(
+    im_sitk: sitk.Image,
+    dvf_t: sitk.Transform,
+    im_ref: sitk.Image=None, 
+    default_pixel_value: int=0, 
+    interpolator=sitk.sitkBSpline
+) -> sitk.Image:
+    """Resamples a SimpleITK image with a given transform.
+
+    Args:
+        im_sitk (sitk.Image): The image to resample.
+
+        dvf_t: A SimpleITK transform object used for resampling.
+
+        im_ref (sitk.Image | None): Optional reference image that defines
+                                    the output size, spacing, origin, and
+                                    direction. If None, the reference is created
+                                    from the transform's displacement field.
+
+        default_pixel_value (int): Pixel value used outside the image bounds.
+
+        interpolator: The SimpleITK interpolator to use for resampling.
+
+    Returns:
+        sitk.Image: The resampled image.
+    """
     if im_ref is None:
         im_ref = sitk.Image(dvf_t.GetDisplacementField().GetSize(), sitk.sitkInt8)
         im_ref.SetOrigin(dvf_t.GetDisplacementField().GetOrigin())
@@ -176,13 +184,50 @@ def resampler_by_transform(im_sitk, dvf_t, im_ref=None,
     resampler.SetDefaultPixelValue(default_pixel_value)
     resampler.SetTransform(dvf_t)
     out_im = resampler.Execute(im_sitk)
+
     return out_im
 
-def resampler_sitk(image, spacing=None, scale=None, 
-                   im_ref=None, im_ref_size=None, 
-                   default_pixel_value=0, 
-                   interpolator=sitk.sitkBSpline, 
-                   dimension=3, offset=True):
+def resampler_sitk(
+    image: np.ndarray,
+    spacing: tuple[float]=None,
+    scale: float=None, 
+    im_ref: sitk.Image=None,
+    im_ref_size: tuple[int]=None, 
+    default_pixel_value: int=0, 
+    interpolator=sitk.sitkBSpline, 
+    dimension: int=3,
+    offset: bool=True
+) -> np.ndarray:
+    """Resamples a NumPy image using SimpleITK with optional spacing and scale.
+
+    Args:
+        image: A NumPy array representing the image to resample.
+
+        spacing (tuple[float] | None): Output image spacing. If provided, the
+            image will be resampled to this spacing.
+
+        scale (float | None): Scaling factor applied to the image spacing when
+            spacing is not provided.
+
+        im_ref (sitk.Image | None): Optional reference SimpleITK image defining
+            the output geometry.
+
+        im_ref_size (tuple[int] | None): Optional reference image size used
+            when `im_ref` is not provided.
+
+        default_pixel_value (int): Value used for pixels outside the image
+            bounds during resampling.
+
+        interpolator: SimpleITK interpolator for resampling.
+
+        dimension (int): The image dimension for the transform.
+
+        offset (bool): Whether to offset the image intensities by 1024 prior
+            to resampling.
+
+    Returns:
+        np.ndarray: The resampled image as a NumPy array.
+    """
     if offset:
         image = image + 1024
 
@@ -199,7 +244,6 @@ def resampler_sitk(image, spacing=None, scale=None,
     elif scale is None:
         ratio = [spacing_dim / spacing[i] for i, spacing_dim in enumerate(image_sitk.GetSpacing())]
         if im_ref_size is None:
-            # im_ref_size = tuple(math.ceil(size_dim * ratio[i]) - 1 for i, size_dim in enumerate(image_sitk.GetSize()))
             im_ref_size = tuple(math.ceil(size_dim * ratio[i]) for i, size_dim in enumerate(image_sitk.GetSize()))
     else:
         raise ValueError('spacing and scale cannot both have values')
@@ -218,7 +262,26 @@ def resampler_sitk(image, spacing=None, scale=None,
 
     return resampled_img
 
-def affine_register(fixed_np, moving_np, moving_seg_np, spacing=(1.0,1.0,1.0), origin=(0,0,0)):
+def affine_register(
+    fixed_np: np.ndarray,
+    moving_np: np.ndarray,
+    moving_seg_np: np.ndarray,
+    spacing: list | tuple=(1.0, 1.0, 1.0),
+    origin=(0, 0, 0)
+) -> tuple[np.ndarray, np.ndarray]:
+    """Performs affine registration of a moving volume to a fixed volume.
+
+    Args:
+        fixed_np (np.ndarray): A NumPy array representing the fixed image.
+        moving_np (np.ndarray): A NumPy array representing the moving image to be registered.
+        moving_seg_np (np.ndarray): A NumPy array containing the moving image segmentation.
+        spacing (tuple[float]): Image spacing for all input volumes.
+        origin (tuple[float]): Image origin for all input volumes.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: The registered moving image and the
+                                       registered segmentation as NumPy arrays.
+    """
     # Convert numpy arrays to SimpleITK images
     fixed_img = sitk.GetImageFromArray(fixed_np.astype(np.float32))
     moving_img = sitk.GetImageFromArray(moving_np.astype(np.float32))
@@ -267,9 +330,20 @@ def affine_register(fixed_np, moving_np, moving_seg_np, spacing=(1.0,1.0,1.0), o
 
     return registered_img_np, registered_seg_np
 
-def pad_and_resize(image, target_size=(256, 256), order=1):
-    """
-    Resizes image while maintaining aspect ratio via zero-padding using numpy.pad.
+def pad_and_resize(
+    image: np.ndarray,
+    target_size: tuple[int]=(256, 256),
+    order: int=1
+) -> np.ndarray:
+    """Resizes image while maintaining aspect ratio via zero-padding
+
+    Args:
+        image (np.ndarray): 2D Image to be resized
+        target_size (tuple[int]): The target size of the image
+        order (int): Interpolation type (1 for bilinear, 0 for nearest)
+    
+    Returns:
+        np.ndarray: The resized image with the target size
     """
     h, w = image.shape[:2]
     # Calculate scale to fit the longest side into target_size
@@ -292,48 +366,8 @@ def pad_and_resize(image, target_size=(256, 256), order=1):
     pad_width = ((pad_h, target_size[0] - new_h - pad_h),
                  (pad_w, target_size[1] - new_w - pad_w))
     
-    # Use numpy.pad instead of skimage.util.pad
     if order == 0:
         resized = resized.astype(np.uint8)
     padded = np.pad(resized, pad_width=pad_width, mode='constant', constant_values=0)
     
     return padded
-
-def camus_full_pipeline(image, target_size=(256, 256), n_iter=15, order=1):
-    """
-    Standardizes CAMUS images for registration models.
-    Order: Resize -> SRAD -> CLAHE
-    """
-    # 1. Standardize Size
-    img = pad_and_resize(image, target_size, order=order)
-    if order == 0:
-        return img
-    
-    # 2. SRAD (Speckle Reducing Anisotropic Diffusion)
-    # Convert to float and normalize
-    img = img.astype(np.float32)
-    img = (img - img.min()) / (img.max() - img.min() + 1e-8)
-    
-    dt = 0.15
-    for _ in range(n_iter):
-        # Using numpy.roll for neighborhood gradients
-        n = np.roll(img, -1, axis=0) - img
-        s = np.roll(img, 1, axis=0) - img
-        e = np.roll(img, -1, axis=1) - img
-        w = np.roll(img, 1, axis=1) - img
-        
-        # Conduction coefficient: reduces smoothing near high gradients (edges)
-        # Higher kappa = more global smoothing
-        kappa = 0.1 
-        cN = np.exp(-(n/kappa)**2)
-        cS = np.exp(-(s/kappa)**2)
-        cE = np.exp(-(e/kappa)**2)
-        cW = np.exp(-(w/kappa)**2)
-        
-        img += dt * (cN*n + cS*s + cE*e + cW*w)
-
-    # 3. CLAHE (Contrast Enhancement)
-    # equalize_adapthist expects 0-1 range and handles the enhancement
-    img_final = exposure.equalize_adapthist(img, clip_limit=0.02)
-    
-    return img_final

@@ -16,7 +16,7 @@ from metrics import (TRE,
                      Dice,
                      ASSD,
                      SDLogJ,
-                     SSIM3d,
+                     SSIM3D,
                      NCCLoss,
                      SurfaceDice,
                      DicePerStructure,
@@ -110,7 +110,7 @@ class DiceTrainer:
         # defining the metrics
         self.hd95 = HD95()
         self.assd  = ASSD()
-        self.ssim = SSIM3d()
+        self.ssim = SSIM3D()
         self.dice1 = Dice(structured=True)
         self.dice2 = SurfaceDice() if data_config['name'] == 'mindboggle' else Dice(structured=False)
         self.jac_det = JacobianDeterminant()
@@ -165,7 +165,7 @@ class DiceTrainer:
                     avg_loss += total_loss.item()
 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
+                    deformation = self.network.multistep_deform(fixed,
                                                          moving,
                                                          grid,
                                                          num_steps=self.num_steps)
@@ -191,7 +191,7 @@ class DiceTrainer:
                 moving_seg = sample[4].to(self.device)
 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
+                    deformation = self.network.multistep_deform(fixed,
                                                          moving,
                                                          grid,
                                                          num_steps=self.num_steps)
@@ -303,7 +303,7 @@ class TRETrainer:
 
         # defining the metrics
         self.tre = TRE()
-        self.ssim = SSIM3d()
+        self.ssim = SSIM3D()
         self.jac_det = JacobianDeterminant()
 
     def run(self):
@@ -353,7 +353,7 @@ class TRETrainer:
                     avg_loss += total_loss.item()
                 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
+                    deformation = self.network.multistep_deform(fixed,
                                                          moving,
                                                          grid,
                                                          num_steps=self.num_steps)
@@ -380,7 +380,7 @@ class TRETrainer:
                 moving_kp = sample[4].to(self.device)
 
                 with torch.no_grad():
-                    deformation = self.network.integrate(fixed,
+                    deformation = self.network.multistep_deform(fixed,
                                                          moving,
                                                          grid,
                                                          num_steps=self.num_steps)
@@ -470,7 +470,7 @@ class DiceTester:
         # defining the metrics
         self.hd95 = HD95()
         self.assd = ASSD()
-        self.ssim = SSIM3d()
+        self.ssim = SSIM3D()
         self.sdlogj = SDLogJ()
         self.dice1 = Dice(structured=True)
         self.dice2 = SurfaceDice() if data_config['name'] == 'mindboggle' else Dice(structured=False)
@@ -511,8 +511,8 @@ class DiceTester:
             fixed_seg = sample[3].to(self.device)
             moving_seg = sample[4].to(self.device)
 
-            forward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps)
-            backward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps, forward=False)
+            forward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps)
+            backward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps, forward=False)
 
             moving_warped = warp(moving, forward_deformation)
             moving_seg_warped = warp(moving_seg, forward_deformation, True)
@@ -797,7 +797,7 @@ class TRETester:
 
         # defining the metrics
         self.tre = TRE()
-        self.ssim = SSIM3d()
+        self.ssim = SSIM3D()
         self.sdlogj = SDLogJ()
         self.jac_det = JacobianDeterminant()
 
@@ -827,8 +827,8 @@ class TRETester:
             fixed_kp = sample[3].to(self.device)
             moving_kp = sample[4].to(self.device)
             
-            forward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps)
-            backward_deformation = self.network.integrate(fixed, moving, grid, num_steps=self.num_steps, forward=False)
+            forward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps)
+            backward_deformation = self.network.multistep_deform(fixed, moving, grid, num_steps=self.num_steps, forward=False)
             
             moving_warped = warp(moving, forward_deformation)
             fixed_warped = warp(fixed, backward_deformation)

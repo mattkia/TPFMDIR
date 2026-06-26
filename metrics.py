@@ -12,19 +12,25 @@ from torchvision.transforms.functional import rgb_to_grayscale
 
 
 class Dice(nn.Module):
-    def __init__(self, structured: bool=True):
+    def __init__(
+        self,
+        structured: bool=True
+    ):
         super().__init__()
 
         self.structured = structured
 
-    def forward(self, seg_map_1: torch.Tensor, 
-                seg_map_2: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        seg_map_1: torch.Tensor,
+        seg_map_2: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
             seg_map_1: The segmentation map of the fixed image.
             seg_map_2: The segmentation map of the warped moving image.
 
-        Returns
+        Returns:
             torch.Tensor: A scaler representing the average DSC score accross all anatomical
                           regions.
         """
@@ -76,14 +82,17 @@ class DicePerStructure(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, seg_map_1: torch.Tensor, 
-                seg_map_2: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        seg_map_1: torch.Tensor,
+        seg_map_2: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
             seg_map_1: The segmentation map of the fixed image.
             seg_map_2: The segmentation map of the warped moving image.
 
-        Returns
+        Returns:
             torch.Tensor: A scaler representing the average DSC score per anatomical
                           regions.
         """
@@ -105,7 +114,10 @@ class DicePerStructure(nn.Module):
 
 
 class SurfaceDice(nn.Module):
-    def __init__(self, tolerance_mm: float = 1.0):
+    def __init__(
+        self,
+        tolerance_mm: float=1.0
+    ):
         """
         Args:
             tolerance_mm (float): Distance threshold (in mm) for surfaces to be considered overlapping.
@@ -113,9 +125,12 @@ class SurfaceDice(nn.Module):
         super().__init__()
         self.tolerance = tolerance_mm
 
-    def forward(self, seg1: torch.Tensor,
-                seg2: torch.Tensor,
-                spacing: Tuple|List = (1.0, 1.0, 1.0)) -> float:
+    def forward(
+        self,
+        seg1: torch.Tensor,
+        seg2: torch.Tensor,
+        spacing: Tuple|List=(1.0, 1.0, 1.0)
+    ) -> torch.Tensor:
         """
         Compute the Surface Dice Coefficient (SDC) for two segmentation maps.
 
@@ -125,7 +140,7 @@ class SurfaceDice(nn.Module):
             spacing (tuple): Voxel spacing in (Z, Y, X) order
 
         Returns:
-            float: Average Surface Dice Coefficient across labels and batch.
+            torch.Tensor: Average Surface Dice Coefficient across labels and batch.
         """
         seg1_np = seg1[0, 0].cpu().numpy()
         seg2_np = seg2[0, 0].cpu().numpy()
@@ -177,27 +192,31 @@ class TRE(nn.Module):
     """
     This class computes the Target to Registration Error (TRE) between two sets of keypoints.
     Main Assumptions:
-    1- axis ordering of the deformation grid and the keypoints
-    2- voxel spacing
+    1- Axis ordering of the deformation grid and the keypoints
+    2- Voxel spacing
     """
     def __init__(self):
         super().__init__()
 
-    def forward(self, fixed_keypoints: torch.Tensor,
-                moving_keypoints: torch.Tensor,
-                deformation_grid: torch.Tensor,
-                id_grid: torch.Tensor
-                ) -> torch.Tensor:
+    def forward(
+        self,
+        fixed_keypoints: torch.Tensor,
+        moving_keypoints: torch.Tensor,
+        deformation_grid: torch.Tensor,
+        id_grid: torch.Tensor
+    ) -> torch.Tensor:
         
         """
         Args:
-            fixed_keypoints: [1, N, 3] - fixed keypoints (ground truth), in voxel coordinates [x, y, z]
-            moving_keypoints: [1, N, 3] - moving keypoints (to be warped), in voxel coordinates [x, y, z]
-            deformation_grid: [1, D, H, W, 3] - normalized grid for sampling
-            id_grid: [1, D, H, W, 3] - identity grid, same normalization
+            fixed_keypoints (torch.Tensor): [1, N, 3] - fixed keypoints (ground truth),
+                                            in voxel coordinates [x, y, z]
+            moving_keypoints (torch.Tensor): [1, N, 3] - moving keypoints (to be warped),
+                                             in voxel coordinates [x, y, z]
+            deformation_grid (torch.Tensor): [1, D, H, W, 3] - normalized grid for sampling
+            id_grid (torch.Tensor): [1, D, H, W, 3] - identity grid, same normalization
 
         Returns:
-            TRE (mean Euclidean error), moved keypoints, displacement field at keypoints
+            torch.Tensor: TRE (mean Euclidean error), moved keypoints, displacement field at keypoints
         """
         _, d, h, w, _ = deformation_grid.shape
 
@@ -219,10 +238,10 @@ class TRE(nn.Module):
         kp2_grid = kp2_norm.view(1, -1, 1, 1, 3)
 
         # Interpolate displacements at kp2 locations
-        # final shape: [1, N, 3]
+        # Final shape: [1, N, 3]
         displacement_field = F.grid_sample(flow, kp2_grid, align_corners=True).squeeze(-1).squeeze(-1).permute(0, 2, 1)
 
-        # apply displacement to kp2
+        # Apply displacement to kp2
         moved_coords = moving_keypoints - displacement_field  
 
         # Compute TRE = average Euclidean distance
@@ -231,31 +250,35 @@ class TRE(nn.Module):
         return tre, moved_coords, displacement_field
 
 
-class TRE2d(nn.Module):
+class TRE2D(nn.Module):
     """
     This class computes the Target to Registration Error (TRE) between two sets of keypoints.
     Main Assumptions:
-    1- axis ordering of the deformation grid and the keypoints
-    2- voxel spacing
+    1- Axis ordering of the deformation grid and the keypoints
+    2- Voxel spacing
     """
     def __init__(self):
         super().__init__()
 
-    def forward(self, fixed_keypoints: torch.Tensor,
-                moving_keypoints: torch.Tensor,
-                deformation_grid: torch.Tensor,
-                id_grid: torch.Tensor
-                ) -> torch.Tensor:
+    def forward(
+        self,
+        fixed_keypoints: torch.Tensor,
+        moving_keypoints: torch.Tensor,
+        deformation_grid: torch.Tensor,
+        id_grid: torch.Tensor
+    ) -> torch.Tensor:
         
         """
         Args:
-            fixed_keypoints: [1, N, 2] - fixed keypoints (ground truth), in voxel coordinates [x, y]
-            moving_keypoints: [1, N, 2] - moving keypoints (to be warped), in voxel coordinates [x, y]
-            deformation_grid: [1, H, W, 2] - normalized grid for sampling
-            id_grid: [1, H, W, 2] - identity grid, same normalization
+            fixed_keypoints (torch.Tensor): [1, N, 2] - fixed keypoints (ground truth),
+                                            in voxel coordinates [x, y]
+            moving_keypoints (torch.Tensor): [1, N, 2] - moving keypoints (to be warped),
+                                             in voxel coordinates [x, y]
+            deformation_grid (torch.Tensor): [1, H, W, 2] - normalized grid for sampling
+            id_grid (torch.Tensor): [1, H, W, 2] - identity grid, same normalization
 
         Returns:
-            TRE (mean Euclidean error), moved keypoints, displacement field at keypoints
+            torch.Tensor: TRE (mean Euclidean error), moved keypoints, displacement field at keypoints
         """
         _, h, w, _ = deformation_grid.shape
 
@@ -275,10 +298,10 @@ class TRE2d(nn.Module):
         kp2_grid = kp2_norm.view(1, -1, 1, 2)
 
         # Interpolate displacements at kp2 locations
-        # final shape: [1, N, 2]
+        # Final shape: [1, N, 2]
         displacement_field = F.grid_sample(flow, kp2_grid, align_corners=True).squeeze(-1).permute(0, 2, 1)
 
-        # apply displacement to kp2
+        # Apply displacement to kp2
         moved_coords = moving_keypoints - displacement_field  
 
         # Compute TRE = average Euclidean distance
@@ -287,15 +310,24 @@ class TRE2d(nn.Module):
         return tre, moved_coords, displacement_field
 
 
-class SSIM3d(nn.Module):
+class SSIM3D(nn.Module):
     """
     This class implements the Structural Similarity Index Measure (SSIM) for 3d images.
     The codes are mainly refactored from
     
     https://github.com/jinh0park/pytorch-ssim-3D/blob/master/pytorch_ssim/
     """
-    def __init__(self, window_size: int=11,
-                 size_average: bool=True) -> None:
+    def __init__(
+        self,
+        window_size: int=11,
+        size_average: bool=True
+    ) -> None:
+        """
+        Args:
+            window_size (int): The window size at which SSIM is calculated
+
+            size_average (bool): If True, the average is computed over the entire batch
+        """
         super().__init__()
         
         self.window_size = window_size
@@ -303,8 +335,11 @@ class SSIM3d(nn.Module):
         self.channels = 1
         self.kernel = self.__create_3d_kernel(window_size, self.channels)
   
-    def forward(self, img1: torch.Tensor,
-                img2: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        img1: torch.Tensor,
+        img2: torch.Tensor
+    ) -> torch.Tensor:
         n_channels = img1.size(1)
         
         if n_channels == self.channels and self.kernel.data.type == img1.data.type:
@@ -319,8 +354,21 @@ class SSIM3d(nn.Module):
         
         return ssim
        
-    def __create_3d_kernel(self, window_size: int,
-                           channels: int) -> torch.Tensor:
+    def __create_3d_kernel(
+        self,
+        window_size: int,
+        channels: int
+    ) -> torch.Tensor:
+        """Creates a 3D Gaussian kernel
+
+        Args:
+            window_size (int): The size of the kernel
+
+            channels (int): The channel dimension of the kernel
+
+        Returns:
+            torch.Tensor: The output Gaussian kernel
+        """
         kernel1d = self.__gaussian(window_size, 1.5).unsqueeze(1)
         kernel2d = torch.mm(kernel1d, kernel1d.t()).unsqueeze(0).unsqueeze(0)
         kernel3d = torch.mm(kernel1d, kernel2d.reshape(1, -1))
@@ -330,19 +378,51 @@ class SSIM3d(nn.Module):
         
         return kernel    
     
-    def __gaussian(self, window_size: int,
-                   sigma: float) -> torch.Tensor:
-        kernel = torch.Tensor([torch.exp(-(x - torch.tensor(window_size // 2))**2 / (2 * torch.tensor(sigma ** 2))) for x in range(window_size)])
+    def __gaussian(
+        self,
+        window_size: int,
+        sigma: float
+    ) -> torch.Tensor:
+        """Creates a 1D Gaussian kernel
+
+        Args:
+            window_size (int): The kernel size
+
+            sigma (int): The standard deviation of the Gaussian kernel
+
+        Returns:
+            torch.Tensor: The output 1D Gaussian kernel
+        """
+        half_window = torch.tensor(window_size // 2)
+        variance = (2 * torch.tensor(sigma ** 2))
+
+        kernel = torch.Tensor([torch.exp(-(x - half_window) ** 2 / variance) for x in range(window_size)])
         kernel = kernel / kernel.sum()
         
         return kernel
     
-    def __ssim(self, img1: torch.Tensor,
-               img2: torch.Tensor,
-               kernel: torch.Tensor, 
-               kernel_size: int,
-               channels: int,
-               size_average: bool) -> torch.Tensor:
+    def __ssim(
+        self,
+        img1: torch.Tensor,
+        img2: torch.Tensor,
+        kernel: torch.Tensor, 
+        kernel_size: int,
+        channels: int,
+        size_average: bool
+    ) -> torch.Tensor:
+        """Computes the SSIM (correlation) accross all patches
+
+        Args:
+            img1 (torch.Tensor): The first image with shape [B, 1, D, H, W]
+            img2 (torch.Tensor): The second image with shape [B, 1, D, H, W]
+            kernel (torch.Tensor): An instance of a 3D Gaussian kernel
+            kernel_size (int): The window size of the kernel
+            channels (int): Number of kernel channels
+            size_average (bool): If True, the average is computed over the entire batch
+        
+        Returns:
+            torch.Tensor: The SSIM between img1 and img2
+        """
         mu1 = F.conv3d(img1, kernel, padding=kernel_size // 2, groups=channels)
         mu2 = F.conv3d(img2, kernel, padding=kernel_size // 2, groups=channels)
         
@@ -368,13 +448,22 @@ class SSIM3d(nn.Module):
             return ssim_map.mean(1).mean(1).mean(1)
 
 
-class SSIM2d(nn.Module):
+class SSIM2D(nn.Module):
     """
     This class implements the Structural Similarity Index Measure (SSIM) for 2D images.
     Adapted from a 3D implementation.
     """
-    def __init__(self, window_size: int = 11,
-                 size_average: bool = True) -> None:
+    def __init__(
+        self,
+        window_size: int=11,
+        size_average: bool=True
+    ) -> None:
+        """
+        Args:
+            window_size (int): The window size at which SSIM is calculated
+
+            size_average (bool): If True, the average is computed over the entire batch
+        """
         super().__init__()
         
         self.window_size = window_size
@@ -382,8 +471,11 @@ class SSIM2d(nn.Module):
         self.channels = 1
         self.kernel = self.__create_2d_kernel(window_size, self.channels)
   
-    def forward(self, img1: torch.Tensor,
-                img2: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        img1: torch.Tensor,
+        img2: torch.Tensor
+    ) -> torch.Tensor:
         n_channels = img1.size(1)
         
         if n_channels == self.channels and self.kernel.data.type() == img1.data.type():
@@ -398,8 +490,21 @@ class SSIM2d(nn.Module):
         
         return ssim
        
-    def __create_2d_kernel(self, window_size: int,
-                           channels: int) -> torch.Tensor:
+    def __create_2d_kernel(
+        self,
+        window_size: int,
+        channels: int
+    ) -> torch.Tensor:
+        """Creates a 2D Gaussian kernel
+
+        Args:
+            window_size (int): The size of the kernel
+
+            channels (int): The channel dimension of the kernel
+
+        Returns:
+            torch.Tensor: The output Gaussian kernel
+        """
         kernel1d = self.__gaussian(window_size, 1.5).unsqueeze(1)
         kernel2d = torch.mm(kernel1d, kernel1d.t()).unsqueeze(0).unsqueeze(0)
         
@@ -407,18 +512,51 @@ class SSIM2d(nn.Module):
         
         return kernel    
     
-    def __gaussian(self, window_size: int,
-                   sigma: float) -> torch.Tensor:
-        gauss = torch.Tensor([torch.exp(-(x - torch.tensor(window_size // 2)) ** 2 / (2 * torch.tensor(sigma ** 2)))
-                              for x in range(window_size)])
-        return gauss / gauss.sum()
+    def __gaussian(
+        self,
+        window_size: int,
+        sigma: float
+    ) -> torch.Tensor:
+        """Creates a 1D Gaussian kernel
+
+        Args:
+            window_size (int): The kernel size
+
+            sigma (int): The standard deviation of the Gaussian kernel
+
+        Returns:
+            torch.Tensor: The output 1D Gaussian kernel
+        """
+        half_window = torch.tensor(window_size // 2)
+        variance = (2 * torch.tensor(sigma ** 2))
+
+        kernel = torch.Tensor([torch.exp(-(x - half_window) ** 2 / variance) for x in range(window_size)])
+        kernel =  kernel / kernel.sum()
+
+        return kernel
     
-    def __ssim(self, img1: torch.Tensor,
-               img2: torch.Tensor,
-               kernel: torch.Tensor, 
-               kernel_size: int,
-               channels: int,
-               size_average: bool) -> torch.Tensor:
+    def __ssim(
+        self,
+        img1: torch.Tensor,
+        img2: torch.Tensor,
+        kernel: torch.Tensor, 
+        kernel_size: int,
+        channels: int,
+        size_average: bool
+    ) -> torch.Tensor:
+        """Computes the SSIM (correlation) accross all patches
+
+        Args:
+            img1 (torch.Tensor): The first image with shape [B, 1, H, W]
+            img2 (torch.Tensor): The second image with shape [B, 1, H, W]
+            kernel (torch.Tensor): An instance of a 3D Gaussian kernel
+            kernel_size (int): The window size of the kernel
+            channels (int): Number of kernel channels
+            size_average (bool): If True, the average is computed over the entire batch
+        
+        Returns:
+            torch.Tensor: The SSIM between img1 and img2
+        """
         mu1 = F.conv2d(img1, kernel, padding=kernel_size // 2, groups=channels)
         mu2 = F.conv2d(img2, kernel, padding=kernel_size // 2, groups=channels)
         
@@ -445,23 +583,43 @@ class SSIM2d(nn.Module):
 
 class NCCLoss(nn.Module):
     """
-    local (over window) normalized cross correlation
+    Local (over window) Normalized Cross Correlation (LNCC)
     codes taken from SYMNet repo and modified
     """
-    def __init__(self, win: int=7, eps: float=1e-5) -> None:
+    def __init__(
+        self,
+        win: int=7,
+        eps: float=1e-5
+    ) -> None:
+        """
+        Args:
+            win (int): The window size for local NCC
+            eps (float): Numerical stability constant
+        """
         super().__init__()
         
         self.win_raw = win
         self.eps = eps
         self.win = win
 
-    def forward(self, fixed: torch.Tensor,
-                moving: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        fixed: torch.Tensor,
+        moving: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Args:
+            fixed (torch.Tensor): Fixed image with size [B, C, D, H, W] or [B, C, H, W]
+            moving (torch.Tensor): Moving image with size [B, C, D, H, W] or [B, C, H, W]
+        
+        Returns:
+            torch.Tensor: The scaler LNCC loss between the batch of images
+        """
         assert len(fixed.shape) == 4 or len(fixed.shape) == 5, '[!] Expected shape of [B, C, H. W] or [B, C, D, H, W]'
         assert len(moving.shape) == 4 or len(moving.shape) == 5, '[!] Expected shape of [B, C, H. W] or [B, C, D, H, W]'
         
         device = fixed.device
-        # converto to grayscale if the images are colored
+        # Converto to grayscale if the images are colored
         if fixed.size(1) > 1:
             fixed = rgb_to_grayscale(fixed)
         if moving.size(1) > 1:
@@ -475,26 +633,30 @@ class NCCLoss(nn.Module):
         weight_win_size = self.win_raw
         
         if ndims == 3:
-            weight = torch.ones((1, 1, weight_win_size, weight_win_size, weight_win_size), device=device, requires_grad=False)
+            weight = torch.ones((1, 1, weight_win_size, weight_win_size, weight_win_size),
+                                device=device,
+                                requires_grad=False)
         else:
-            weight = torch.ones((1, 1, weight_win_size, weight_win_size), device=device, requires_grad=False)
+            weight = torch.ones((1, 1, weight_win_size, weight_win_size),
+                                device=device,
+                                requires_grad=False)
             
         conv_fn = F.conv3d if ndims == 3 else F.conv2d
 
-        # compute CC squares
+        # Compute CC squares
         fixed2 = fixed * fixed
         moving2 = moving * moving
         fixed_moving = fixed * moving
 
-        # compute filters
-        # compute local sums via convolution
+        # Compute filters
+        # Compute local sums via convolution
         fixed_sum = conv_fn(fixed, weight, padding=int(win_size/2))
         moving_sum = conv_fn(moving, weight, padding=int(win_size/2))
         fixed2_sum = conv_fn(fixed2, weight, padding=int(win_size/2))
         moving2_sum = conv_fn(moving2, weight, padding=int(win_size/2))
         fixed_moving_sum = conv_fn(fixed_moving, weight, padding=int(win_size/2))
 
-        # compute cross correlation
+        # Compute cross correlation
         win_size = np.prod(self.win)
         u_I = fixed_sum/win_size
         u_J = moving_sum/win_size
@@ -505,7 +667,7 @@ class NCCLoss(nn.Module):
 
         cc = cross * cross / (I_var * J_var + self.eps)
 
-        # return negative cc.
+        # Ceturn negative cc.
         loss = -1.0 * torch.mean(cc)
         
         return loss
@@ -525,18 +687,28 @@ class MINDLoss(nn.Module):
     ) -> None:
         """
         Args:
-            radius: patch radius for SSD computation
-            dilation: displacement distance for neighborhood comparison
-            eps: numerical stability constant
+            radius (int): Patch radius for SSD computation
+            dilation (int): Displacement distance for neighborhood comparison
+            eps (float): Numerical stability constant
         """
         super().__init__()
         self.radius = radius
         self.dilation = dilation
         self.eps = eps
 
-    def _get_shifts(self, ndims: int, device: torch.device):
-        """
-        Returns neighborhood shift vectors
+    def _get_shifts(
+        self,
+        ndims: int,
+        device: torch.device
+    ) -> torch.Tensor:
+        """Returns neighborhood shift vectors
+
+        Args:
+            ndims (int): Number of image dimensions
+            device (torch.device): The computation device
+        
+        Returns:
+            torch.Tensor: Shift tensors
         """
         if ndims == 2:
             shifts = torch.tensor([
@@ -559,9 +731,19 @@ class MINDLoss(nn.Module):
 
         return shifts * self.dilation
 
-    def _shift_tensor(self, x: torch.Tensor, shift: torch.Tensor):
-        """
-        Spatially shifts tensor using padding and slicing
+    def _shift_tensor(
+        self,
+        x: torch.Tensor,
+        shift: torch.Tensor
+    ) -> torch.Tensor:
+        """Spatially shifts tensor using padding and slicing
+
+        Args:
+            x (torch.Tensor): The input tensor that is to be shifted
+            shift (torch.Tensor): The shift tensor
+        
+        Returns:
+            torch.Tensor: The shifted tensors
         """
         ndims = len(shift)
         pad = []
@@ -581,11 +763,20 @@ class MINDLoss(nn.Module):
 
         x_pad = F.pad(x, pad, mode='replicate')
         slices = [slice(None), slice(None)] + list(reversed(slices))
+
         return x_pad[tuple(slices)]
 
-    def _compute_mind(self, img: torch.Tensor):
-        """
-        Computes MIND descriptors
+    def _compute_mind(
+        self,
+        img: torch.Tensor
+    ) -> torch.Tensor:
+        """Computes MIND descriptors
+
+        Args:
+            img (torch.Tensor): Input image with size [B, C, D, H, W] or [B, C, H, W]
+        
+        Return:
+            torch.Tensor: The MIND descriptors for the image
         """
         ndims = img.dim() - 2
         device = img.device
@@ -632,11 +823,14 @@ class MINDLoss(nn.Module):
     ) -> torch.Tensor:
         """
         Args:
-            fixed: [B, C, H, W] or [B, C, D, H, W]
-            moving: same shape as fixed
+            fixed (torch.Tensor): Fixed image with size [B, C, H, W] or [B, C, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, C, H, W] or [B, C, D, H, W]
+        
+        Returns:
+            torch.Tensor: The scaler MIND loss between the images
         """
-        assert fixed.shape == moving.shape, "Fixed and moving must have same shape"
-        assert fixed.dim() in (4, 5), "Expected 2D or 3D inputs"
+        assert fixed.shape == moving.shape, 'Fixed and moving must have same shape'
+        assert fixed.dim() in (4, 5), 'Expected 2D or 3D inputs'
 
         # Convert to grayscale if needed
         if fixed.size(1) > 1:
@@ -655,7 +849,17 @@ class JacobianDeterminant(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, deformation_grid: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        deformation_grid: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Args:
+            deformation_grid (torch.Tensor): A [B, D, H, W, 3] or [B, H, W, 2] deformation grid
+
+        Returns:
+            torch.Tensor: The average percentage of voxels with negative jacobian determinants
+        """
         if len(deformation_grid.size()) == 4:
             dy = deformation_grid[:, 1:, :-1, :] - deformation_grid[:, :-1, :-1, :]
             dx = deformation_grid[:, :-1, 1:, :] - deformation_grid[:, :-1, :-1, :]
@@ -683,20 +887,39 @@ class JacobianDeterminant(nn.Module):
 
 
 class SDLogJ(nn.Module):
-    def __init__(self, eps: float = 1e-6):
+    def __init__(
+        self,
+        eps: float=1e-6
+    ) -> None:
         super().__init__()
         self.eps = eps
 
-    def forward(self, deformation_grid: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        deformation_grid: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Args:
+            deformation_grid (torch.Tensor): [B, D, H, W, 3] or [B, H, W, 2] deformation grid
+
+        Returns:
+            torch.Tensor: The scaler SDLogJ metric
+        """
         if len(deformation_grid.size()) == 4:
             return self.compute_sdlogj_2d(deformation_grid)
         elif len(deformation_grid.size()) == 5:
             return self.compute_sdlogj(deformation_grid)
 
-    def compute_sdlogj(self, grid):
+    def compute_sdlogj(
+        self,
+        grid: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
-            grid: (B, D, H, W, 3) deformation grid
+            grid: [B, D, H, W, 3] deformation grid
+
+        Returns:
+            torch.Tensor: 3D SDLogJ metric
         """
         # 1. Spatial gradients
         # Use central differences along Depth (d), Height (h), and Width (w)
@@ -705,7 +928,6 @@ class SDLogJ(nn.Module):
         dw = (grid[:, 1:-1, 1:-1, 2:, :] - grid[:, 1:-1, 1:-1, :-2, :]) / 2.0
 
         # 2. Jacobian components
-        # row 1: grad of x-coord; row 2: grad of y-coord; row 3: grad of z-coord
         J11 = dd[..., 0]; J12 = dh[..., 0]; J13 = dw[..., 0]
         J21 = dd[..., 1]; J22 = dh[..., 1]; J23 = dw[..., 1]
         J31 = dd[..., 2]; J32 = dh[..., 2]; J33 = dw[..., 2]
@@ -717,20 +939,23 @@ class SDLogJ(nn.Module):
 
         return torch.std(torch.log(det.clamp(min=1e-9)))
     
-    def compute_sdlogj_2d(self, grid):
+    def compute_sdlogj_2d(
+        self,
+        grid: torch.Tensor
+    ) -> torch.Tensor:
         """
         Args:
-            grid: (B, H, W, 2) deformation grid
+            grid: [B, H, W, 2] deformation grid
+
+        Returns:
+            torch.Tensor: 2D SDLogJ metric
         """
         # 1. Compute gradients of the grid coordinates
-        # Grid is [B, H, W, 2] -> grid[..., 0] is x-coords, grid[..., 1] is y-coords
-        # Gradient w.r.t x (width)
         dx = (grid[:, 1:-1, 2:, :] - grid[:, 1:-1, :-2, :]) / 2.0
         # Gradient w.r.t y (height)
         dy = (grid[:, 2:, 1:-1, :] - grid[:, :-2, 1:-1, :]) / 2.0
 
         # 2. Extract Jacobian components
-        # J = [[dx/dx, dx/dy], [dy/dx, dy/dy]]
         J11 = dx[..., 0]; J12 = dy[..., 0]
         J21 = dx[..., 1]; J22 = dy[..., 1]
 
@@ -743,9 +968,12 @@ class HD95(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, seg1: torch.Tensor,
-                seg2: torch.Tensor,
-                spacing: Tuple|List=(1.0, 1.0, 1.0)):
+    def forward(
+        self,
+        seg1: torch.Tensor,
+        seg2: torch.Tensor,
+        spacing: Tuple|List=(1.0, 1.0, 1.0)
+    ) -> torch.Tensor:
         """
         Compute the 95th percentile Hausdorff Distance (HD95) for two segmentation maps.
 
@@ -755,7 +983,7 @@ class HD95(nn.Module):
             spacing (tuple): Voxel spacing in (Z, Y, X) order
 
         Returns:
-            float: The HD95 metric
+            torch.Tensor: The scalar HD95 metric
         """
         
         # Convert to numpy
@@ -797,10 +1025,15 @@ class HD95(nn.Module):
 
 
 class NGFLoss(nn.Module):
-    def __init__(self, eps: float=1e-8,
-                 reduction: str = 'mean'):
+    def __init__(
+        self,
+        eps: float=1e-8,
+        reduction: str = 'mean'
+    ) -> None:
         super().__init__()
+
         assert reduction in ('mean', 'sum')
+
         self.eps = float(eps)
         self.reduction = reduction
 
@@ -810,13 +1043,13 @@ class NGFLoss(nn.Module):
         kernel_x = torch.zeros((1, 1, 3, 3, 3), dtype=torch.float32)
         kernel_y = torch.zeros_like(kernel_x)
         kernel_z = torch.zeros_like(kernel_x)
-        # for x: differences along last axis (width)
+        # For x: differences along last axis (width)
         kernel_x[0, 0, 1, 1, 0] = -0.5
         kernel_x[0, 0, 1, 1, 2] = 0.5
-        # for y: differences along height
+        # For y: differences along height
         kernel_y[0, 0, 1, 0, 1] = -0.5
         kernel_y[0, 0, 1, 2, 1] = 0.5
-        # for z: differences along depth
+        # For z: differences along depth
         kernel_z[0, 0, 0, 1, 1] = -0.5
         kernel_z[0, 0, 2, 1, 1] = 0.5
 
@@ -825,78 +1058,96 @@ class NGFLoss(nn.Module):
         self.register_buffer("kernel_y", kernel_y)
         self.register_buffer("kernel_z", kernel_z)
 
-    def _image_to_single_channel(self, img: torch.Tensor) -> torch.Tensor:
-        # if multi-channel, average channels -> produce shape (B,1,D,H,W)
+    def _image_to_single_channel(
+        self,
+        img: torch.Tensor
+    ) -> torch.Tensor:
+        # If multi-channel, average channels -> produce shape [B, 1, D, H, W]
         if img.dim() != 5:
-            raise ValueError("Expected image shape (B, C, D, H, W)")
-        B, C, D, H, W = img.shape
+            raise ValueError('Expected image shape (B, C, D, H, W)')
+        C = img.shape[1]
         if C == 1:
             return img
         else:
-            # mean over channels but keep channel dimension
+            # Mean over channels but keep channel dimension
             return img.mean(dim=1, keepdim=True)
 
-    def _gradients(self, img: torch.Tensor) -> torch.Tensor:
+    def _gradients(
+        self,
+        img: torch.Tensor
+    ) -> torch.Tensor:
         """
         Compute gradients with conv3d central difference kernels.
-        img: (B,1,D,H,W)
-        returns: grad (B, 3, D, H, W) where channels are [gx, gy, gz]
+
+        Args:
+            img (torch.Tensor): Input image with size [B, 1, D, H, W]
+
+        Returns: 
+            torch.Tensor: grad [B, 3, D, H, W] where channels are [gx, gy, gz]
         """
-        # padding=1 to keep same shape (same padding)
         gx = F.conv3d(img, self.kernel_x, padding=1)
         gy = F.conv3d(img, self.kernel_y, padding=1)
         gz = F.conv3d(img, self.kernel_z, padding=1)
+
         return torch.cat([gx, gy, gz], dim=1)
 
-    def forward(self,
-                fixed: torch.Tensor,
-                moving: torch.Tensor,
-                mask: torch.Tensor = None) -> torch.Tensor:
+    def forward(
+        self,
+        fixed: torch.Tensor,
+        moving: torch.Tensor,
+        mask: torch.Tensor=None
+    ) -> torch.Tensor:
         """
-        fixed, moving: (B, C, D, H, W)
-        mask: optional (B, 1, D, H, W) or (B, D, H, W) boolean/float mask where 1 indicates valid voxels
-        returns: scalar loss
+        Args:
+            fixed (torch.Tensor): Fixed image with size [B, C, D, H, W]
+            moving (torch.Tensor): Moving image with size [B, C, D, H, W]
+            mask (torch.Tensor): Optional [B, 1, D, H, W] or [B, D, H, W] 
+                                 boolean/float mask where 1 indicates valid
+                                 voxels
+        Returns:
+            torch.Tensor: The scalar NGF loss
         """
         F_img = self._image_to_single_channel(fixed)
         M_img = self._image_to_single_channel(moving)
 
-        # compute gradients
-        gF = self._gradients(F_img)  # (B,3,D,H,W)
+        # Compute gradients
+        gF = self._gradients(F_img)
         gM = self._gradients(M_img)
 
-        # normalize gradient vectors per voxel
-        # compute squared norm of gradient vectors: sum over vector components
-        gF_sq = (gF * gF).sum(dim=1, keepdim=True)  # (B,1,D,H,W)
+        # Normalize gradient vectors per voxel
+        # Compute squared norm of gradient vectors: sum over vector components
+        gF_sq = (gF * gF).sum(dim=1, keepdim=True)
         gM_sq = (gM * gM).sum(dim=1, keepdim=True)
 
-        # norm with eps for stability
+        # Norm with eps for stability
         nF = gF / torch.sqrt(gF_sq + (self.eps ** 2))
         nM = gM / torch.sqrt(gM_sq + (self.eps ** 2))
 
-        # dot product per voxel
-        dot = (nF * nM).sum(dim=1, keepdim=True)  # (B,1,D,H,W)
+        # Dot product per voxel
+        dot = (nF * nM).sum(dim=1, keepdim=True)
 
-        # per-voxel NGF energy: 1 - (dot)^2 (in [0,1])
-        ngf_per_voxel = 1.0 - dot * dot  # (B,1,D,H,W)
+        # Per-voxel NGF energy: 1 - (dot)^2 (in [0,1])
+        ngf_per_voxel = 1.0 - dot * dot
 
-        # apply mask if provided
+        # Apply mask if provided
         if mask is not None:
             if mask.dim() == 4:
-                mask = mask.unsqueeze(1)  # (B,1,D,H,W)
+                mask = mask.unsqueeze(1)
             if mask.shape != ngf_per_voxel.shape:
-                raise ValueError("mask must have shape (B,1,D,H,W) or (B,D,H,W)")
+                raise ValueError('mask must have shape [B, 1, D, H, W] or [B, D, H, W]')
+
             maskf = mask.to(dtype=ngf_per_voxel.dtype)
             ngf_per_voxel = ngf_per_voxel * maskf
             valid_voxels = maskf.sum()
             if valid_voxels == 0:
-                # no valid voxels; return zero to avoid division by zero
+                # No valid voxels; return zero to avoid division by zero
                 return torch.tensor(0.0, device=ngf_per_voxel.device, dtype=ngf_per_voxel.dtype)
         else:
             valid_voxels = torch.tensor(ngf_per_voxel.numel(), device=ngf_per_voxel.device, dtype=ngf_per_voxel.dtype)
 
-        if self.reduction == "sum":
+        if self.reduction == 'sum':
             loss = ngf_per_voxel.sum()
-        else:  # mean
+        else:
             loss = ngf_per_voxel.sum() / valid_voxels
 
         return loss
@@ -906,9 +1157,12 @@ class ASSD(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, seg1: torch.Tensor,
-                seg2: torch.Tensor,
-                spacing: Tuple | List = (1.0, 1.0, 1.0)):
+    def forward(
+        self,
+        seg1: torch.Tensor,
+        seg2: torch.Tensor,
+        spacing: Tuple | List=(1.0, 1.0, 1.0)
+    ) -> torch.Tensor:
         """
         Compute the Average Symmetric Surface Distance (ASSD) for two segmentation maps.
 

@@ -11,10 +11,10 @@ if __name__ == '__main__':
                         type=str,
                         default='acdc_unet',
                         help='JSON file for configuration')
-    # parse configs
+
     args = parser.parse_args()
 
-    # configurations
+
     torch.cuda.empty_cache()
 
     with open(f'configs/{args.config}.yaml', 'r') as handle:
