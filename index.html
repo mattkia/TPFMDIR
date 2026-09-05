@@ -228,27 +228,28 @@
 </section>
 
 <!-- Methodology -->
-<!-- <section class="section">
+<section class="section">
   <div class="container is-max-desktop">
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3">SGDIR in a Nutshell</h2>
+        <h2 class="title is-3">TPFMDIR in a Nutshell</h2>
         <div class="content">
           <ul>
-            <li>SGDIR is a registration framework; it is architecture-agnostic as long as the architecture supports time injection and is appropriately designed for image registration</li>
-            <li>SGDIR has only one regularization term (partial semigroup regularization) controled by a factor $\lambda$; A high value of $\lambda$ ($\approx 10^5$) is suitable
-              for fully diffeomorphic settings, while a slightly lower value ($\approx 10^4$) is a good choice for deformable settings where diffeomorphism carries less importance
-              than alignment accuracy.</li>
+            <li>TPFMDIR is a registration framework; it is architecture-agnostic as long as the architecture supports time injection and is appropriately designed for image registration</li>
+            <li>TPFMDIR has only one regularization term (<i>anchored cocycle regularization</i>) and provably recovers the solution of a <i>non-autonomous ODE</i>
+            (an ODE with time-dependent velocity field).</li>
+            <li><span style="color: #A52A2A;">TPFM-DIR</span> extends previous <span style="color: #208080;">SGDIR</span> framework from autonomous ODEs to non-autonomous ODEs with minimal
+            structural changes and without losing theoretical guarantees</li>
           </ul>
 
           <figure class="image is-centered mt-5">
-            <img src="static/images/sgdir-scheme.png" alt="SGDIR scheme figure" style="width: 70%; height: auto;">
+            <img src="static/images/arch.png" alt="TPFMDIR scheme figure" style="width: 70%; height: auto;">
           </figure>
         </div>
       </div>
     </div>
   </div>
-</section> -->
+</section>
 
 <!-- Methodology -->
 <!-- <section class="section">
