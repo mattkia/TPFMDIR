@@ -239,7 +239,7 @@
             <li>TPFMDIR has only one regularization term (<i>anchored cocycle regularization</i>) and provably recovers the solution of a <i>non-autonomous ODE</i>
             (an ODE with time-dependent velocity field).</li>
             <li><span style="color: #A52A2A;">TPFM-DIR</span> extends previous <span style="color: #208080;"><a href="https://mattkia.github.io/SGDIR">SGDIR</a></span> framework from autonomous ODEs to non-autonomous ODEs with minimal
-            structural changes and without losing theoretical guarantees</li>
+            structural changes and without losing theoretical guarantees.</li>
           </ul>
 
           <figure class="image is-centered mt-5">
@@ -323,52 +323,21 @@
 </section>
 
 <!-- Results -->
-<!-- <section class="section">
+<section class="section">
   <div class="container is-max-desktop">
     <div class="columns is-centered">
       <div class="column is-full-width">
         <h2 class="title is-3">Results Summary</h2>
-
-        <h3 class="title is-4">Continuous-Time Deformation</h3>
-        <div class="content has-text-justified">
-          <p>
-            SGDIR learns the diffeomorphism trajectory $\phi_t$ at any timestep $t$ enabling a continuous deformation of the image.
-            Thanks to its formulation, SGDIR can infer the warped image $I_t := I\circ\phi_t$ instantly without doing any integration.
-          </p>
-        </div>
-
-        <div class="columns is-vcentered interpolation-panel">
-          <div class="column is-3 has-text-centered">
-            <img src="./static/images/oasis/oasis_moving.png"
-                 class="interpolation-image"
-                 alt="Interpolate start reference image."/>
-            <p>Source Image</p>
-          </div>
-          <div class="column interpolation-video-column">
-            <div id="interpolation-image-wrapper">
-              Loading...
-            </div>
-            <input class="slider is-fullwidth is-large is-info"
-                   id="interpolation-slider"
-                   step="1" min="0" max="100" value="0" type="range">
-          </div>
-          <div class="column is-3 has-text-centered">
-            <img src="./static/images/oasis/oasis_fixed.png"
-                 class="interpolation-image"
-                 alt="Interpolation end reference image."/>
-            <p class="is-bold">Target Image</p>
-          </div>
-        </div>
         
         <div class="column is-full-width">
         <div class="content">
           <ul>
-            <li>SGDIR is evaluated on 8 2D/3D datasets: OASIS, IXI, LPBA40, Mindboggle101, CANDI, LungCT, AbdomenCTCT, and ACDC</li>
-            <li>SGDIR is compared with more than 15 strong baselines including GradICON, NODEO, NePhi, TransMorph, TransMatch, DiffuseReg, HViT, CorrMLP, SACB-Net, etc.</li>
+            <li>TPFMDIR is evaluated on 9 2D/3D datasets: OASIS, IXI, LPBA40, Mindboggle101, CANDI, LungCT, AbdomenCTCT, ACDC, and CAMUS</li>
+            <li>TPFMDIR is compared with more than 15 strong baselines including GradICON, NODEO, NePhi, TransMorph, TransMatch, DiffuseReg, HViT, CorrMLP, SACB-Net, etc.</li>
           </ul>
         </div>
         <figure class="image is-centered mt-5">
-          <img src="static/images/sgdir-results.png" alt="SGDIR results figure">
+          <img src="static/images/results1.png" alt="TPFMDIR results figure">
         </figure></br>
         
         <div style="overflow-x: auto">
@@ -398,6 +367,20 @@
   
             <tbody>
               <tr>
+                <td>LDDMM</td>
+                <td>76.59</td>
+                <td>0.0064</td>
+                <td>67.90</td>
+                <td>0.0034</td>
+                <td>69.23</td>
+                <td>0.0011</td>
+                <td>64.57</td>
+                <td>0.0061</td>
+                <td>78.52</td>
+                <td>0.0017</td>
+              </tr>
+
+              <tr>
                 <td>TransMorph-diff</td>
                 <td>83.51</td>
                 <td>0.0066</td>
@@ -413,11 +396,11 @@
   
               <tr>
                 <td>GradICON</td>
-                <td>83.89</td>
+                <td>83.74</td>
                 <td>0.0039</td>
                 <td>76.43</td>
                 <td>0.0018</td>
-                <td>72.21</td>
+                <td>74.21</td>
                 <td>0.0011</td>
                 <td>70.78</td>
                 <td>0.0117</td>
@@ -435,7 +418,7 @@
                 <td>0.4428</td>
                 <td>71.80</td>
                 <td>1.4051</td>
-                <td>84.67</td>
+                <td>83.67</td>
                 <td>0.1368</td>
               </tr>
 
@@ -454,40 +437,55 @@
               </tr>
   
               <tr>
-                <td><b><span style="color: #208080;">SGDIR $(\lambda=10^5)$</b></td>
-                <td><b>85.90</b></td>
-                <td><b>0.0003</b></td>
-                <td><b>80.18</b></td>
-                <td><b>0.0</b></td>
-                <td><b>77.13</b></td>
-                <td><b>0.0</b></td>
-                <td><b>71.58</b></td>
-                <td><b>0.0004</b></td>
-                <td><b>84.50</b></td>
-                <td><b>0.0003</b></td>
+                <td><span style="color: #208080;">SGDIR $(\lambda=10^5)$</td>
+                <td>85.90</td>
+                <td>0.0003</td>
+                <td>80.18</td>
+                <td>0.0</td>
+                <td>77.13</td>
+                <td>0.0</td>
+                <td>71.58</td>
+                <td>0.0004</td>
+                <td>84.50</td>
+                <td>0.0003</td>
               </tr>
 
               <tr>
-                <td><b><span style="color: #208080;">SGDIR $(\lambda=10^4)$</b></td>
-                <td><b>87.82</b></td>
+                <td><span style="color: #208080;">SGDIR $(\lambda=10^4)$</td>
+                <td>87.82</td>
                 <td>0.3982</td>
-                <td><b>83.88</b></td>
+                <td>83.88</td>
                 <td>0.6036</td>
-                <td><b>78.93</b></td>
+                <td>78.93</td>
                 <td>0.1821</td>
-                <td><b>73.59</b></td>
+                <td>73.59</td>
                 <td>0.6512</td>
-                <td><b>85.51</b></td>
+                <td>85.51</td>
                 <td>0.0473</td>
+              </tr>
+
+              <tr>
+                <td><b><span style="color: #A52A2A;">TPFMDIR</b></td>
+                <td>87.08</td>
+                <td>0.0019</td>
+                <td>82.52</td>
+                <td>0.0015</td>
+                <td>77.87</td>
+                <td>0.0005</td>
+                <td>74.79</td>
+                <td>0.0012</td>
+                <td>84.77</td>
+                <td>0.0001</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <figure class="image is-centered mt-5">
-          <img src="static/images/ixi-results.png" alt="IXI results figure">
+          <img src="static/images/results2.png" alt="IXI results figure">
           <figcaption class="mt-2" style="text-align: center;">
-            Sample results and comparison on the IXI dataset. <b>FP</b> stands for folding percentage and is the same metric as $|J_\phi|_{<0}\%$
+            Sample results and comparison on the IXI dataset. Folding percentage as $|J_\phi|_{<0}\%$ and SDLogJ metrics are shown in the lower left
+            and the lower right corners of deformations. Dice scores are reported at the bottom of each warping result.
           </figcaption>
         </figure></br>
 
@@ -496,8 +494,8 @@
 
             <figure>
               <img
-                src="static/images/lungct-results.png"
-                alt="LungCT results figure"
+                src="static/images/results3.png"
+                alt="TPFMDIR Architecture Agnosticism"
                 style="
                   width: 100%;
                   height: auto;
@@ -507,7 +505,7 @@
                 ">
 
               <figcaption class="mt-2" style="text-align: center;">
-                Sample results and comparison on the LungCT dataset.
+                Effect of training different architecture under TPFMDIR setting on accuracy and regularity.
               </figcaption>
             </figure>
 
@@ -547,9 +545,15 @@
                   </tr>
 
                   <tr>
-                    <td><b><span style="color: #208080;">SGDIR $(\lambda = 10^5)$</span></b></td>
-                    <td><b>2.37</b></td>
-                    <td><b>0.0</b></td>
+                    <td><span style="color: #208080;">SGDIR $(\lambda = 10^5)$</span></td>
+                    <td>2.37</td>
+                    <td>0.0</td>
+                  </tr>
+                  
+                  <tr>
+                    <td><b><span style="color: #A52A2A;">TPFMDIR</span></b></td>
+                    <td>2.19</td>
+                    <td>0.0</td>
                   </tr>
                 </tbody>
               </table>
@@ -587,9 +591,15 @@
                   </tr>
 
                   <tr>
-                    <td><b><span style="color: #208080;">SGDIR $(\lambda=10^5)$</span></b></td>
-                    <td><b>53.64</b></td>
-                    <td><b>0.0</b></td>
+                    <td><span style="color: #208080;">SGDIR $(\lambda=10^5)$</span></td>
+                    <td>53.64</td>
+                    <td>0.0</td>
+                  </tr>
+                  
+                  <tr>
+                    <td><b><span style="color: #A52A2A;">TPFMDIR</span></b></td>
+                    <td>54.54</td>
+                    <td>0.0002</td>
                   </tr>
                 </tbody>
               </table>
@@ -626,24 +636,31 @@
               </tr>
   
               <tr>
-                <td><b><span style="color: #208080;">SGDIR $(\lambda = 10^5)$</span></b></td>
-                <td><b>85.79</b></td>
-                <td><b>0.0</b></td>
+                <td><span style="color: #208080;">SGDIR $(\lambda = 10^5)$</span></td>
+                <td>85.79</td>
+                <td>0.0</td>
+              </tr>
+              
+              <tr>
+                <td><b><span style="color: #A52A2A;">TPFMDIR</span></b></td>
+                <td>87.42</td>
+                <td>0.0002</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <figure class="image is-centered mt-5">
-          <img src="static/images/acdc-results.png" alt="ACDC results figure">
+          <img src="static/images/results4.png" alt="ACDC results figure">
           <figcaption class="mt-2" style="text-align: center;">
-            Sample results and comparison on the ACDC dataset.
+            Sample results and comparison on the ACDC and CAMUS datasets.
           </figcaption>
         </figure></br>
       </div>
+    
     </div>
   </div>
-</section> -->
+</section>
 
 
 <section class="section" id="BibTeX">
