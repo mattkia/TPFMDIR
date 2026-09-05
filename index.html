@@ -91,8 +91,8 @@
     <div class="container is-max-desktop">
       <div class="columns is-centered">
         <div class="column has-text-centered">
-          <h1 class="title is-1 publication-title"><span style="color: #208080;">TPFM-DIR</span>: <span style="color: #208080;">T</span>wo-<span style="color: #208080;">P</span>arameter
-            <span style="color: #208080;">F</span>low <span style="color: #208080;">M</span>ap <span style="color: #208080;">D</span>iffeomorphic <span style="color: #208080;">I</span>mage <span style="color: #208080;">R</span>egistration</h1>
+          <h1 class="title is-1 publication-title"><span style="color: #A52A2A;">TPFM-DIR</span>: <span style="color: #A52A2A;">T</span>wo-<span style="color: #A52A2A;">P</span>arameter
+            <span style="color: #A52A2A;">F</span>low <span style="color: #A52A2A;">M</span>ap <span style="color: #A52A2A;">D</span>iffeomorphic <span style="color: #A52A2A;">I</span>mage <span style="color: #A52A2A;">R</span>egistration</h1>
           <div class="is-size-5">
             <p>Two-Parameter Flow Map Learning for Continuous-Time Diffeomorphic Image Registration</p>
           </div></br>
@@ -206,26 +206,23 @@
 </section> -->
 
 <!-- Abstract and Youtube Video -->
-<!-- <section class="section">
+<section class="section">
   <div class="container is-max-desktop">
     <div class="columns is-centered has-text-centered">
       <div class="column is-four-fifths">
         <h2 class="title is-3">Abstract</h2>
         <div class="content has-text-justified">
           <p>
-            Diffeomorphic image registration (DIR) seeks topology-preserving transformations and is fundamental 
-            in medical imaging. Existing DIR methods rely on integration schemes (e.g., scaling-and-squaring) 
-            and multiple regularizers to enforce invertibility. We introduce <b>SGDIR</b>, a continuous-time 
-            registration framework, parameterized by known time-embedded backbones, that models diffeomorphisms 
-            using only a single semigroup-based regularization, eliminating explicit integration and auxiliary 
-            constraints. We mathematically prove that this formulation directly learns the flow of an underlying ODE, 
-            inherently enforcing inverse and cycle consistencies. We evaluate on eight 2D and 3D MR and CT datasets. 
-            Under strict semigroup enforcement, our model achieves near-perfect diffeomorphism and significantly outperforms 
-            existing diffeomorphic methods, while remaining competitive with leading non-diffeomorphic deformable models. 
-            When the regularization is relaxed, the same architecture functions as a deformable method and substantially 
-            surpasses state-of-the-art non-diffeomorphic approaches in registration accuracy. These results demonstrate 
-            that continuous-time deformation modeling, guided solely by our semigroup-based regularization, yields a unified 
-            framework capable of both rigorously diffeomorphic mapping and state-of-the-art deformable registration.
+            Diffeomorphic image registration is central to medical image analysis, enabling anatomically consistent alignment across subjects.
+            Most learning-based diffeomorphic methods model autonomous ODEs (ordinary differential equations) by parameterizing a stationary
+            velocity field and recovering deformations via scaling-and-squaring. While non-autonomous ODEs with time-dependent velocities increase
+            expressiveness, existing approaches rely on numerical integration to implicitly enforce flow structure that entangles model expressiveness
+            with discretization accuracy. We propose a framework to directly learn the continuous-time solution of a non-autonomous ODE formulated as
+            a two-parameter flow map. By enforcing <i>cocycle consistency</i>, a fundamental structural property of time-varying flows, we learn the
+            flow maps without time discretization and velocity integration during training. The framework recovers diffeomorphic mappings at inference
+            using a small number of compositions. Our proposed framework seamlessly incorporates standard registration backbones and improves alignment
+            accuracy consistently across nine datasets while preserving diffeomorphic structure. Notably, the proposed method achieves an average Dice
+            improvement of 2.1% on brain MRI benchmarks, a 12% TRE reduction on lung CT, and a 2.6\% Dice gain on cardiac MRI and ultrasound datasets.
           </p>
         </div>
       </div>
@@ -235,13 +232,13 @@
       <div class="column is-four-fifths">
         <h2 class="title is-3">Presentation Video</h2>
         <div class="publication-video">
-          <iframe src="https://www.youtube.com/embed/ss_GC9hi-7k?rel=0&amp;showinfo=0"
+          <iframe src="https://www.youtube.com/embed/PCUOC426DO8?si=WeJ1U1BUGqLfpkLs"
                   frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         </div>
       </div>
     </div>
   </div>
-</section> -->
+</section>
 
 <!-- Methodology -->
 <!-- <section class="section">
