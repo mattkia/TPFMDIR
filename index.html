@@ -238,12 +238,12 @@
             <li>TPFMDIR is a registration framework; it is architecture-agnostic as long as the architecture supports time injection and is appropriately designed for image registration</li>
             <li>TPFMDIR has only one regularization term (<i>anchored cocycle regularization</i>) and provably recovers the solution of a <i>non-autonomous ODE</i>
             (an ODE with time-dependent velocity field).</li>
-            <li><span style="color: #A52A2A;">TPFM-DIR</span> extends previous <span style="color: #208080;">SGDIR</span> framework from autonomous ODEs to non-autonomous ODEs with minimal
+            <li><span style="color: #A52A2A;">TPFM-DIR</span> extends previous <span style="color: #208080;"><a href="https://mattkia.github.io/SGDIR">SGDIR</a></span> framework from autonomous ODEs to non-autonomous ODEs with minimal
             structural changes and without losing theoretical guarantees</li>
           </ul>
 
           <figure class="image is-centered mt-5">
-            <img src="static/images/arch.png" alt="TPFMDIR scheme figure" style="width: 70%; height: auto;">
+            <img src="static/images/arch.png" alt="TPFMDIR scheme figure" style="width: 50%; height: auto;">
           </figure>
         </div>
       </div>
@@ -252,59 +252,75 @@
 </section>
 
 <!-- Methodology -->
-<!-- <section class="section">
+<section class="section">
   <div class="container is-max-desktop">
     <div class="columns is-centered">
       <div class="column is-full-width">
-        <h2 class="title is-3">SGDIR Methodology</h2>
-        To model a diffeomorphism $\phi$ warping a moving image $I_m$ to a fixed image $I_f$, SGDIR learns the solution of a stationary ODE
+        <h2 class="title is-3">TPFMDIR Methodology</h2>
+        To model a diffeomorphism $\phi$ warping a moving image $I_m$ to a fixed image $I_f$, TPFMDIR learns the solution of a non-autonomous ODE
         <p>
           $$
           \begin{cases}
-          \frac{d\phi_t}{dt} &= v(\phi_t) \\
+          \frac{d\phi_t}{dt} &= v(\phi_t, t) \\
           \phi_0 &= \mathrm{id}
           \end{cases}
           $$
         </p>
         <p>
-          SGDIR takes the dynamical systems perspective of the ODE solutions:
+          TPFMDIR takes the dynamical systems perspective of the ODE solutions:
         </p>
         <p>
           $$
-          \phi_0 = \mathrm{Id},\quad\underbrace{\phi_s\circ\phi_t=\phi_{s+t}}_\text{Semigroup Property} \iff \begin{cases}\frac{d\phi_t}{dt} &= v(\phi_t) \\\phi_0 &= \mathrm{id}\end{cases}\quad\text{(for some velocity field }v\text{)}
+          \phi_0 = \mathrm{Id},\quad\underbrace{\phi_{r, t}\circ\phi_{s, r}=\phi_{s, t}}_\text{Cocycle Property} \iff \begin{cases}\frac{d\phi_{s, t}}{dt} &= v(\phi_{s, t}, t) \\\phi_0 &= \mathrm{id}\end{cases}\quad\text{(for some velocity field }v\text{)}
           $$
         </p>
         <p>
-          Unlike conventional diffeomorphic registration methods, which model the velocity field $v(.)$
-          and solve the ODE using well-known methods such as scaling-and-squaring, SGDIR directly models
-          the flow map solution of the ODE and learns the diffeomorphism <b>without velocity parameterization</b>,
-          <b>without any integration during training and inference</b>, and <b>withour multiple regularization terms</b>.
+          Note that, for the non-autonomous ODE, the solution depends on both the initial time $s$ and the end time $t$, whereas for the stationary
+          case, the solution only depends on the elapsed time. This is the reason the solutions are called <b>two-parameter</b> family.
         </p>
         <p>
-          To this end, SGDIR introduces a <i>partial Semigroup regularization</i> as the only regularization term and employs
-          a time-dependent loss function, which provably drives the model towards, learning the ODE solution, hence inheriting
+          Usually, to find the solution of such non-autonomous ODEs, the velocity field $v(., t)$ is modeled and the
+          solution is obtained by expensive numerical integrations such as RK4 method. The cost of such methods for the
+          task of medical image registration which usually deals with large images, has caused this type of modeling to be
+          largely overlooked.
+        </p>
+        <p>
+          TPFMDIR mitigates this issue and directly models the two-parameter flow map solution of the ODE and learns the diffeomorphism
+          <b>without velocity parameterization</b>, <b>without any numerical integration</b>, and <b>withour multiple regularization terms</b>.
+        </p>
+        <p>
+          To this end, TPFMDIR introduces a <i>anchored cocycle regularization</i> as the only regularization term and employs
+          a time-dependent loss function, which provably drives the model towards learning the ODE solution, hence inheriting
           their smoothness and diffeomorphic properties.
         </p>
 
         <figure class="image is-centered mt-5">
-          <img src="static/images/sgdir-concept.png" alt="SGDIR concept figure">
+          <img src="static/images/concept.png" alt="TPFMDIR concept figure">
         </figure></br>
 
         <p>
-          Importantly, we show that the full semigroup regularization is deducible from the partial semigroup regularization.
-          Practically, we don't need independent time poinst $s$ and $t$ to impose the full semigroup; rather, only using time
-          points $t-1$ and $t$ suffices for a guaranteed learning of the ODE solution:
+          Importantly, we show that the full cocycle property is deducible from the anchored cocycle regularization.
+          Practically, we don't need independent time poinst $r$, $s$ and $t$ to impose the full cocycle; rather, only using time
+          points $s$ and $t$ suffices for a guaranteed learning of the ODE solution:
         </p>
 
         <p>
           $$
-            \underbrace{\phi_{t-1}\circ\phi_t=\phi_{2t-1}}_\text{Partial Semigroup Property} \implies \underbrace{\phi_s\circ\phi_t=\phi_{s+t}}_\text{Full Semigroup Property}
+            \underbrace{\phi_{s, t}\circ\phi_{0, s}=\phi_{0, t}, \phi_{t, s}\circ\phi_{1, t}=\phi_{1, s}}_\text{Anchored Cocycle Property} \implies \underbrace{\phi_{r, t}\circ\phi_{s, r}=\phi_{s,t}}_\text{Full Cocycle Property}
           $$
         </p>
+        <p>
+          Moreover, we show that without any numerical differentiation, one could extract the learned underlying instataneous velocity field governing
+          the dynamics of the ODE.
+        </p>
+
+        <figure class="image is-centered mt-5">
+          <img src="static/images/candi.png" alt="Instantaneous Velocity">
+        </figure></br>
       </div>
     </div>
   </div>
-</section> -->
+</section>
 
 <!-- Results -->
 <!-- <section class="section">
